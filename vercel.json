@@ -4,5 +4,5 @@
   "buildCommand": "",
   "outputDirectory": "site",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": true
 }
