@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="460" viewBox="0 0 960 460" role="img" aria-labelledby="t d">
+  <title id="t">GH-X n8n workflow inventory</title>
+  <desc id="d">23 unique n8n workflow exports across 8 pipeline stages</desc>
+  <rect width="960" height="460" fill="#f3efe6"/>
+  <text x="48" y="48" font-family="Georgia, serif" font-size="22" fill="#1c2420">GH-X n8n inventory (definition-level)</text>
+  <text x="48" y="74" font-family="sans-serif" font-size="13" fill="#4a554e">23 unique workflow exports · 8 stages · Functional Build · JSON private</text>
+  <g font-family="sans-serif" font-size="13">
+    <rect x="40" y="100" width="210" height="70" rx="8" fill="#2a332e"/><text x="145" y="130" text-anchor="middle" fill="#e8dfd0" font-weight="600">1 Ideation</text><text x="145" y="150" text-anchor="middle" fill="#c9b896">3 workflows</text>
+    <rect x="265" y="100" width="210" height="70" rx="8" fill="#3f5c48"/><text x="370" y="130" text-anchor="middle" fill="#e8dfd0" font-weight="600">2 Listing / Prompts</text><text x="370" y="150" text-anchor="middle" fill="#c9b896">2 workflows</text>
+    <rect x="490" y="100" width="210" height="70" rx="8" fill="#5a7a5e"/><text x="595" y="130" text-anchor="middle" fill="#e8dfd0" font-weight="600">3 Visual Assets</text><text x="595" y="150" text-anchor="middle" fill="#c9b896">4 workflows</text>
+    <rect x="715" y="100" width="205" height="70" rx="8" fill="#2a332e"/><text x="817" y="130" text-anchor="middle" fill="#e8dfd0" font-weight="600">4 Etsy Commerce</text><text x="817" y="150" text-anchor="middle" fill="#c9b896">draft publish</text>
+    <rect x="40" y="190" width="210" height="70" rx="8" fill="#3f5c48"/><text x="145" y="220" text-anchor="middle" fill="#e8dfd0" font-weight="600">5 Social</text><text x="145" y="240" text-anchor="middle" fill="#c9b896">Metricool</text>
+    <rect x="265" y="190" width="210" height="70" rx="8" fill="#5a7a5e"/><text x="370" y="220" text-anchor="middle" fill="#e8dfd0" font-weight="600">6 Video</text><text x="370" y="240" text-anchor="middle" fill="#c9b896">HeyGen poll/QA</text>
+    <rect x="490" y="190" width="210" height="70" rx="8" fill="#2a332e"/><text x="595" y="220" text-anchor="middle" fill="#e8dfd0" font-weight="600">7 Feedback</text><text x="595" y="240" text-anchor="middle" fill="#c9b896">performance notes</text>
+    <rect x="715" y="190" width="205" height="70" rx="8" fill="#3f5c48"/><text x="817" y="220" text-anchor="middle" fill="#e8dfd0" font-weight="600">8 Reliability</text><text x="817" y="240" text-anchor="middle" fill="#c9b896">alerts / requeue</text>
+    <rect x="40" y="290" width="880" height="130" rx="12" fill="#faf8f4" stroke="#c9b896"/>
+    <text x="64" y="325" font-size="15" fill="#1c2420" font-weight="600">Services observed in definitions</text>
+    <text x="64" y="355" font-size="13" fill="#4a554e">Airtable · OpenAI · Etsy API · Google Drive · HeyGen · Metricool</text>
+    <text x="64" y="380" font-size="13" fill="#4a554e">Patterns: Schedule/Error triggers · IF/Switch · Split In Batches · HTTP · status writebacks</text>
+    <text x="64" y="405" font-size="12" fill="#6e8a72">Source: GH-X case study · export active flags false · not claimed as production traffic</text>
+  </g>
+</svg>

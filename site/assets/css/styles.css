@@ -651,9 +651,15 @@ main {
   overflow-x: auto;
 }
 
-.diagram-frame svg {
+.diagram-frame svg,
+.diagram-frame img {
   width: 100%;
   height: auto;
+  max-width: 100%;
+  display: block;
+}
+
+.diagram-frame svg {
   min-width: 36rem;
 }
 
