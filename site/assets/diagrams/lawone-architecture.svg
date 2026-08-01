@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-labelledby="t d">
+  <title id="t">LawOne AI system architecture</title>
+  <desc id="d">User UI to API gates to research, AI services, monitoring, retrieval, database, and official sources</desc>
+  <rect width="960" height="520" fill="#f3efe6"/>
+  <text x="48" y="42" font-family="Georgia, serif" font-size="22" fill="#1c2420">LawOne AI — system topology</text>
+  <text x="48" y="68" font-family="sans-serif" font-size="13" fill="#4a554e">Legal information platform · citation-first · no live LLM/Auth in current public claim</text>
+  <g font-family="sans-serif" font-size="13" text-anchor="middle">
+    <rect x="300" y="90" width="360" height="48" rx="8" fill="#2a332e"/><text x="480" y="120" fill="#e8dfd0" font-weight="600">User / Organization UI (Next.js)</text>
+    <rect x="300" y="160" width="360" height="48" rx="8" fill="#3f5c48"/><text x="480" y="190" fill="#e8dfd0" font-weight="600">API v1 + Entitlement Gates</text>
+    <rect x="40" y="240" width="280" height="56" rx="8" fill="#5a7a5e"/><text x="180" y="274" fill="#e8dfd0">Research / Search</text>
+    <rect x="340" y="240" width="280" height="56" rx="8" fill="#5a7a5e"/><text x="480" y="274" fill="#e8dfd0">AI Legal Services</text>
+    <rect x="640" y="240" width="280" height="56" rx="8" fill="#5a7a5e"/><text x="780" y="274" fill="#e8dfd0">Monitoring / Compliance</text>
+    <rect x="220" y="330" width="520" height="48" rx="8" fill="#2a332e"/><text x="480" y="360" fill="#e8dfd0" font-weight="600">Retrieval + Citation Validation</text>
+    <rect x="220" y="400" width="520" height="48" rx="8" fill="#3f5c48"/><text x="480" y="430" fill="#e8dfd0">PostgreSQL / Supabase + pgvector (foundation)</text>
+    <rect x="220" y="460" width="520" height="40" rx="8" fill="#c9b896"/><text x="480" y="486" fill="#1c2420">Ingestion connectors ← Official government sources</text>
+  </g>
+</svg>

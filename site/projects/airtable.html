@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Airtable Systems — Leroy Garvin Jr</title>
-  <meta name="description" content="Airtable queue and status systems for AI workflow stages — Functional Build, private base contents withheld.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta name="description" content="Airtable queue systems for AI automation: 5 documented tables, schema evidence, QA note patterns.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" media="print" onload="this.media='all'">
@@ -34,62 +34,45 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / Airtable</p>
       <h1>Airtable Systems</h1>
-      <p class="lede">Structured tables and fields for workflow stages, statuses, and issue tracking — described without publishing private base contents.</p>
+      <p class="lede">Queue and status backbone for GH-X automation stages — documented table structure without publishing private base IDs or record dumps.</p>
       <div class="badge-row">
         <span class="badge">Functional Build</span>
-        <span class="badge">Diagram + placeholders</span>
+        <span class="badge">5 tables documented</span>
       </div>
     </div>
-
-    <section class="section" style="padding-top:0">
-      <div class="wrap">
-        <div class="prose">
-          <h2>Role in the stack</h2>
-          <p>Airtable is the queue and data backbone for GH-X automation stages. n8n stages read work items, act, and write status so the next stage can proceed. Issue and QA notes support classify → fix → retest loops.</p>
-        </div>
-
-        <div class="diagram-frame">
-          <img src="/assets/diagrams/airtable-queue.svg" alt="Airtable queue tables connected to n8n stages and QA notes" width="720" height="320" loading="lazy">
-          <p class="diagram-caption">Structure described publicly — private base contents are not published.</p>
-        </div>
-
-        <div class="gallery">
-          <figure>
-            <img src="/assets/images/placeholders/airtable-base-placeholder.png" alt="Placeholder illustration of Airtable base overview" width="1200" height="750" loading="lazy">
-            <figcaption>Placeholder — sanitized base overview screenshot pending</figcaption>
-          </figure>
-          <figure>
-            <img src="/assets/images/placeholders/airtable-fields-placeholder.png" alt="Placeholder illustration of Airtable field structure" width="1200" height="750" loading="lazy">
-            <figcaption>Placeholder — field structure screenshot pending (IDs withheld)</figcaption>
-          </figure>
-        </div>
-
-        <div class="prose">
-          <h2>What the public pack covers</h2>
-          <ul>
-            <li>Queue-oriented planning for workflow stages</li>
-            <li>Status fields for stage tracking</li>
-            <li>Issue / QA note patterns for continuous improvement</li>
-            <li>How Airtable pairs with n8n for operational consistency</li>
-          </ul>
-
-          <h2>What is withheld</h2>
-          <ul>
-            <li>Private base IDs, share links, and record dumps</li>
-            <li>Credentials and automation tokens</li>
-            <li>Full field schemas that would enable cloning proprietary ops</li>
-          </ul>
-
-          <h2>Current status</h2>
-          <ul>
-            <li>Documented planning + definition usage</li>
-            <li>Public visuals: diagram + labeled placeholders (live UI capture still preferred)</li>
-          </ul>
-
-          <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X system</a> · <a href="/projects/n8n.html">n8n capability</a></p>
-        </div>
+    <section class="section" style="padding-top:0"><div class="wrap">
+      <div class="prose"><h2>Measurable accomplishments</h2></div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Documented GH-X tables</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Pipeline stages supported</div></div>
+        <div class="metric"><div class="metric-value">1</div><div class="metric-label">Queue-first ops model</div></div>
+        <div class="metric"><div class="metric-value">QA</div><div class="metric-label">Issue-note loop supported</div></div>
       </div>
-    </section>
+      <div class="diagram-frame">
+        <img src="/assets/diagrams/airtable-queue.svg" alt="Airtable queue connected to n8n stages" width="720" height="320" loading="lazy">
+        <p class="diagram-caption">Queue tables feed n8n stages; status and QA notes close the loop.</p>
+      </div>
+      <div class="diagram-frame" style="margin-top:1rem">
+        <img src="/assets/diagrams/airtable-schema.svg" alt="Documented Airtable schema with five tables" width="960" height="420" loading="lazy">
+        <p class="diagram-caption">Schema evidence from public Airtable table documentation — IDs withheld.</p>
+      </div>
+      <div class="prose">
+        <h2>Documented tables</h2>
+        <ul>
+          <li><strong>Products</strong> — product / SKU status</li>
+          <li><strong>ContentQueue</strong> — stage work items</li>
+          <li><strong>Settings</strong> — configuration</li>
+          <li><strong>Content Engine</strong> — content operations</li>
+          <li><strong>GHX Dashboard</strong> — operational overview</li>
+        </ul>
+        <h2>What is withheld</h2>
+        <ul>
+          <li>Private base IDs, share links, and record dumps</li>
+          <li>Credentials and automation tokens</li>
+        </ul>
+        <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/n8n.html">n8n</a></p>
+      </div>
+    </div></section>
   </main>
 
   <footer class="site-footer">

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>n8n Workflow Automation — Leroy Garvin Jr</title>
-  <meta name="description" content="n8n workflow automation capability: orchestration patterns used inside GH-X — Functional Build, no importable exports.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta name="description" content="n8n orchestration inventory: 23 GH-X workflows, patterns, and services — Functional Build evidence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" media="print" onload="this.media='all'">
@@ -34,60 +34,43 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / n8n</p>
       <h1>n8n Workflow Automation</h1>
-      <p class="lede">Demonstrates scheduled orchestration, queue processing, branching, batching, HTTP API calls, and error-handling patterns used inside the GH-X system — without exposing importable workflow exports.</p>
+      <p class="lede">Orchestration capability demonstrated through the GH-X definition set — scheduled triggers, validation, branching, batching, HTTP APIs, and status writebacks — without publishing importable JSON.</p>
       <div class="badge-row">
         <span class="badge">Functional Build</span>
+        <span class="badge">23 workflows inventoried</span>
       </div>
     </div>
-
-    <section class="section" style="padding-top:0">
-      <div class="wrap">
-        <div class="prose">
-          <h2>Capability overview</h2>
-          <p>n8n is the orchestration layer for GH-X stage processing: pull a queue item, validate, optionally call AI or external APIs, branch on quality or status, then write results back to Airtable for the next stage.</p>
-        </div>
-
-        <div class="diagram-frame">
-          <img src="/assets/diagrams/n8n-orchestration.svg" alt="n8n orchestration: Trigger, Validate, AI or API, Branch and Write" width="800" height="200" loading="lazy">
-          <p class="diagram-caption">High-level capability view. Workflow JSON exports are private-only.</p>
-        </div>
-
-        <div class="gallery">
-          <figure>
-            <img src="/assets/images/placeholders/n8n-canvas-placeholder.png" alt="Placeholder illustration of an n8n workflow canvas" width="1200" height="750" loading="lazy">
-            <figcaption>Placeholder — live n8n canvas screenshot pending (sanitized)</figcaption>
-          </figure>
-          <figure>
-            <img src="/assets/images/placeholders/n8n-nodes-placeholder.png" alt="Placeholder illustration of key automation nodes" width="1200" height="750" loading="lazy">
-            <figcaption>Placeholder — key nodes close-up pending (secrets cropped)</figcaption>
-          </figure>
-        </div>
-
-        <div class="prose">
-          <h2>Patterns practiced</h2>
-          <ul>
-            <li>Schedule and event triggers</li>
-            <li>Queue item validation before work</li>
-            <li>Optional AI generation or HTTP API steps</li>
-            <li>Quality / status branching</li>
-            <li>Status writes to Airtable for downstream stages</li>
-            <li>Error-handling and reliability mindset (alerts, requeue / review)</li>
-          </ul>
-
-          <h2>Relationship to GH-X</h2>
-          <p>This page explains orchestration skill at a capability level. The full multi-stage product pipeline is documented on the <a href="/projects/ghx.html">GH-X project page</a>. Individual workflow pages and JSON remain private.</p>
-
-          <h2>Current status</h2>
-          <ul>
-            <li>Functional Build definitions exist privately</li>
-            <li>Public pack is sanitized narrative only</li>
-            <li>Not claimed as proven production traffic</li>
-          </ul>
-
-          <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X system</a> · <a href="/projects/airtable.html">Airtable systems</a></p>
-        </div>
+    <section class="section" style="padding-top:0"><div class="wrap">
+      <div class="prose"><h2>Measurable accomplishments</h2></div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-value">23</div><div class="metric-label">Unique workflow exports documented</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Pipeline stages covered</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Services wired in definitions</div></div>
+        <div class="metric"><div class="metric-value">4+</div><div class="metric-label">Core orchestration patterns</div></div>
       </div>
-    </section>
+      <div class="diagram-frame">
+        <img src="/assets/diagrams/n8n-orchestration.svg" alt="n8n orchestration pattern diagram" width="800" height="200" loading="lazy">
+        <p class="diagram-caption">Capability view — Trigger → Validate → AI/API → Branch → Write.</p>
+      </div>
+      <div class="diagram-frame" style="margin-top:1rem">
+        <img src="/assets/diagrams/n8n-inventory.svg" alt="GH-X n8n workflow inventory across eight stages" width="960" height="460" loading="lazy">
+        <p class="diagram-caption">Definition-level inventory from the GH-X case study. JSON exports remain private.</p>
+      </div>
+      <div class="prose">
+        <h2>Patterns practiced</h2>
+        <ul>
+          <li>Schedule and error triggers</li>
+          <li>Queue item validation before work</li>
+          <li>Optional AI generation or HTTP API steps</li>
+          <li>Quality / status branching and Split In Batches</li>
+          <li>Status writes to Airtable for downstream stages</li>
+          <li>Reliability mindset: alerts, requeue / review</li>
+        </ul>
+        <h2>Services observed in definitions</h2>
+        <p>Airtable, OpenAI, Etsy API, Google Drive, HeyGen, Metricool.</p>
+        <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/airtable.html">Airtable</a></p>
+      </div>
+    </div></section>
   </main>
 
   <footer class="site-footer">

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="t d">
+  <title id="t">GH-X Airtable schema overview</title>
+  <desc id="d">Five documented tables: Products, ContentQueue, Settings, Content Engine, GHX Dashboard</desc>
+  <rect width="960" height="420" fill="#f3efe6"/>
+  <text x="48" y="48" font-family="Georgia, serif" font-size="22" fill="#1c2420">GH-X Airtable schema (documented)</text>
+  <text x="48" y="74" font-family="sans-serif" font-size="13" fill="#4a554e">5 tables · queue + status backbone · base IDs withheld</text>
+  <g font-family="sans-serif">
+    <rect x="40" y="100" width="170" height="90" rx="10" fill="#2a332e"/><text x="125" y="140" text-anchor="middle" fill="#e8dfd0" font-size="15" font-weight="600">Products</text><text x="125" y="162" text-anchor="middle" fill="#c9b896" font-size="12">SKU / status</text>
+    <rect x="230" y="100" width="170" height="90" rx="10" fill="#3f5c48"/><text x="315" y="140" text-anchor="middle" fill="#e8dfd0" font-size="15" font-weight="600">ContentQueue</text><text x="315" y="162" text-anchor="middle" fill="#c9b896" font-size="12">Stage work items</text>
+    <rect x="420" y="100" width="170" height="90" rx="10" fill="#5a7a5e"/><text x="505" y="140" text-anchor="middle" fill="#e8dfd0" font-size="15" font-weight="600">Settings</text><text x="505" y="162" text-anchor="middle" fill="#c9b896" font-size="12">Config knobs</text>
+    <rect x="610" y="100" width="170" height="90" rx="10" fill="#2a332e"/><text x="695" y="140" text-anchor="middle" fill="#e8dfd0" font-size="15" font-weight="600">Content Engine</text><text x="695" y="162" text-anchor="middle" fill="#c9b896" font-size="12">Content ops</text>
+    <rect x="800" y="100" width="120" height="90" rx="10" fill="#3f5c48"/><text x="860" y="140" text-anchor="middle" fill="#e8dfd0" font-size="14" font-weight="600">GHX</text><text x="860" y="162" text-anchor="middle" fill="#c9b896" font-size="12">Dashboard</text>
+    <rect x="40" y="230" width="880" height="140" rx="12" fill="#faf8f4" stroke="#c9b896"/>
+    <text x="64" y="268" font-size="15" fill="#1c2420" font-weight="600">Documented operational role</text>
+    <text x="64" y="298" font-size="13" fill="#4a554e">n8n stages read queue rows → transform / call APIs → write status for the next stage.</text>
+    <text x="64" y="322" font-size="13" fill="#4a554e">Issue / QA notes support classify → fix → retest loops across the pipeline.</text>
+    <text x="64" y="346" font-size="12" fill="#6e8a72">Source: public Airtable table documentation · private IDs and record dumps withheld</text>
+  </g>
+</svg>
