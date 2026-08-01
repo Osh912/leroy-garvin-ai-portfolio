@@ -2,6 +2,8 @@
 
 How to update and redeploy the **web portfolio** after launch.
 
+**Live URL:** https://leroy-garvin-ai-portfolio.vercel.app  
+**GitHub:** https://github.com/Osh912/leroy-garvin-ai-portfolio  
 **Live site source:** [`site/`](./site/)  
 **Vercel config:** root [`vercel.json`](./vercel.json) → `outputDirectory: site`  
 **GitHub Pages:** [`.github/workflows/pages.yml`](./.github/workflows/pages.yml)
