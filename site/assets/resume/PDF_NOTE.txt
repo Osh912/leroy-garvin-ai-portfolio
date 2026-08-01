@@ -1,0 +1,5 @@
+Resume PDF is generated and available at:
+Leroy_Garvin_Jr_AI_Operations_Resume.pdf
+
+Source of truth for content: ../../FINAL_MASTER_RESUME.md (repo root)
+Regenerate with reportlab script if the master resume changes.

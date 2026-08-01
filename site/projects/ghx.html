@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH-X Automation System — Leroy Garvin Jr</title>
+  <meta name="description" content="GH-X digital product automation: Functional Build pipeline with n8n and Airtable. Sample product visuals included.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"></noscript>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="nav-brand" href="../index.html">Leroy Garvin Jr <span>· AI Ops</span></a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" aria-label="Primary">
+        <ul class="nav-list">
+          <li><a href="../index.html" data-nav="home">Home</a></li>
+          <li><a href="index.html" data-nav="projects">Projects</a></li>
+          <li><a href="../resume.html" data-nav="resume">Resume</a></li>
+          <li><a href="../about.html" data-nav="about">About</a></li>
+          <li><a href="../contact.html" data-nav="contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap page-hero">
+      <p class="section-label"><a href="index.html">Projects</a> / GH-X</p>
+      <h1>GH-X Automation System</h1>
+      <p class="lede">Connects product-ops stages through Airtable-centered queues and n8n automations. Each stage reads work items, performs transforms and/or AI/API calls, then writes status for downstream stages.</p>
+      <div class="badge-row">
+        <span class="badge">Functional Build</span>
+        <span class="badge">Product samples + diagrams</span>
+      </div>
+    </div>
+
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="prose">
+          <h2>Business problem</h2>
+          <p>Creating and publishing digital product assets involves many handoffs (ideas → copy → images → listings → social/video → measurement). Manual handoffs are easy to skip, hard to QA, and difficult to improve systematically.</p>
+
+          <h2>My contribution</h2>
+          <p>I independently designed and configured the GH-X automation definitions and queue-oriented process flow, including prompt/payload assembly patterns and multi-service orchestration across the pipeline stages below.</p>
+
+          <h2>Pipeline architecture</h2>
+        </div>
+
+        <div class="diagram-frame">
+          <img src="../assets/diagrams/ghx-pipeline.svg" alt="GH-X pipeline: Idea, Listing, Visual, Publish, Social, Video, Feedback, Reliability" width="960" height="220" loading="lazy">
+          <p class="diagram-caption">Abstract systems diagram — not an implementable export. Individual workflow JSON is private-only.</p>
+        </div>
+
+        <div class="prose">
+          <h2>Stage overview</h2>
+          <ul>
+            <li><strong>Ideation &amp; Research</strong> — Create/recycle product and content ideas into queues</li>
+            <li><strong>Listing &amp; Prompt Generation</strong> — Produce listing copy / design-reel prompts</li>
+            <li><strong>Visual Asset Generation</strong> — Generate images/mockups/product files; store references</li>
+            <li><strong>Commerce Publish</strong> — Validate queues; create draft listings via commerce APIs</li>
+            <li><strong>Social Scheduling</strong> — Build packs and schedule social posts</li>
+            <li><strong>Video Pipeline</strong> — Script → generate video → poll status → QA gate</li>
+            <li><strong>Performance Feedback</strong> — Write metric notes back for learning loops</li>
+            <li><strong>Reliability</strong> — Error alerts and failed-row requeue / review</li>
+          </ul>
+
+          <h2>Skills demonstrated</h2>
+          <ul>
+            <li>AI Operations / workflow design</li>
+            <li>Prompt &amp; payload strategy (high-level)</li>
+            <li>No-code automation (n8n)</li>
+            <li>Queue/data planning (Airtable)</li>
+            <li>API orchestration</li>
+            <li>QA / failure handling mindset</li>
+            <li>Process documentation</li>
+          </ul>
+
+          <h2>GH-X digital product output samples</h2>
+          <p>Sample visuals from a Harbor &amp; Home moving binder package produced through the GH-X product pipeline. These illustrate digital product output quality — not claims of marketplace sales volume or production traffic.</p>
+        </div>
+
+        <div class="gallery">
+          <figure>
+            <img src="../assets/images/ghx/cover.png" alt="GH-X sample: Harbor and Home moving binder cover" width="400" height="300" loading="lazy">
+            <figcaption>Cover — digital product sample</figcaption>
+          </figure>
+          <figure>
+            <img src="../assets/images/ghx/lifestyle-mockup.png" alt="GH-X sample: lifestyle mockup of planner pages" width="400" height="300" loading="lazy">
+            <figcaption>Lifestyle mockup — product sample</figcaption>
+          </figure>
+          <figure>
+            <img src="../assets/images/ghx/listing-page.png" alt="GH-X sample: listing page mockup showing full planner page" width="400" height="300" loading="lazy">
+            <figcaption>Listing page mockup — product sample</figcaption>
+          </figure>
+          <figure>
+            <img src="../assets/images/ghx/closeup-timeline.png" alt="GH-X sample: closeup of moving timeline page" width="400" height="300" loading="lazy">
+            <figcaption>Closeup timeline — product sample</figcaption>
+          </figure>
+        </div>
+
+        <div class="prose">
+          <h2>Current status</h2>
+          <ul>
+            <li>System design: <strong>Functional Build</strong></li>
+            <li>Public screenshots of live automation runs: <strong>Evidence Pending</strong></li>
+            <li>Production Ready: <strong>No</strong> — not presented as proven production traffic</li>
+          </ul>
+
+          <p><a href="index.html">← All projects</a> · <a href="n8n.html">n8n capability</a> · <a href="airtable.html">Airtable systems</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="mailto:AlignedVibesCo@gmail.com">AlignedVibesCo@gmail.com</a>
+        <a href="tel:+19129016378">(912) 901-6378</a>
+        <a href="https://www.linkedin.com/in/leroy-garvin-49443b423/" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+        <a href="../legal.html">Legal</a>
+      </div>
+      <p class="footer-copy">© 2026 Leroy Garvin Jr</p>
+    </div>
+  </footer>
+  <script src="../assets/js/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Public Recruiter Portfolio — recommended .gitignore
+.env
+.env.*
+*.pem
+*.key
+credentials/
+secrets/
+private/
+00 PRIVATE MASTER PORTFOLIO/
+Original JSON Exports/
+*.private.json
+*.secret.json
+node_modules/
+.DS_Store
+*.log

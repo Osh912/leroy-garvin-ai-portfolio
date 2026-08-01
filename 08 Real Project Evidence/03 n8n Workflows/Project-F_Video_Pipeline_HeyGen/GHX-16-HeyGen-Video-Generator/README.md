@@ -1,0 +1,54 @@
+# GHX-16-HeyGen-Video-Generator
+
+**Portfolio group:** F — Video Pipeline (Script → HeyGen → Poll → QA)  
+**Definition source:** `GHX-16-HeyGen-Video-Generator.json` (Desktop GH-X workflows export)  
+**Complexity:** Intermediate  
+**Status:** Functional Build  
+**Production Ready:** No (no execution evidence)  
+**Active in export:** `False`
+
+## Recruiter-friendly summary
+On a schedule, create HeyGen videos for video-ready rows and mark processing or log errors in Airtable.
+
+**Plain English:** Starts on a schedule (`Schedule · Every 15 Minutes`). Sets fields (`Set · Load HeyGen Config`). Transforms/prepares data in Code node `Code · Setup Config`. Airtable `search` via `Airtable · Search Video Ready`. Processes records in batches (`Batch · Split Records`). Transforms/prepares data in Code node `Code · Build HeyGen Payload`. Transforms/prepares data in Code node `Code · Batch Complete`. Branches with an IF check (`Filter · Payload OK`). HTTP request via `HTTP · HeyGen Create Video` (HeyGen). Airtable `update` via `Airtable · Log HeyGen Error`. Transforms/prepares data in Code node `Code · Parse HeyGen Response`. Branches with an IF check (`Filter · Video Id Returned`). Airtable `update` via `Airtable · Mark Video Processing`.
+
+## Business purpose
+On a schedule, create HeyGen videos for video-ready rows and mark processing or log errors in Airtable.
+
+## What exists in the definition
+- **Nodes:** 13 (excluding sticky notes)
+- **Connections:** 15
+- **Triggers:** Schedule · Every 15 Minutes
+
+## Integrations (from nodes)
+- Airtable
+- Code
+- HTTP Request
+- HeyGen (via HTTP)
+- IF
+- Schedule Trigger
+- Set
+- Split In Batches
+
+## AI components (from nodes)
+- HTTP · HeyGen Create Video → HeyGen
+
+## Inputs / outputs (definition-level)
+- **Inputs:** Trigger event + Airtable search/filter rows where present
+- **Outputs:** Airtable create/update operations and/or external HTTP calls listed above
+- **Needs Review:** Exact Airtable base/table names and field schemas (not copied into portfolio to avoid leaking workspace specifics without privacy review)
+
+## Complexity rationale
+Estimated **Intermediate** from node count (13), branching, batching, and multi-HTTP patterns in the definition.
+
+## Status rationale
+Marked **Functional Build** because the export contains a connected node graph with configured integrations, but local execution history was empty and export `active` is `False`. **Not Production Ready.**
+
+## Notes / Needs Review
+- Export flag `active: false`.
+- No execution evidence in local n8n DB for this export set.
+
+## Links
+- [Analysis.md](./Analysis.md)
+- [Evidence_Checklist.md](./Evidence_Checklist.md)
+- [Privacy_Checklist.md](./Privacy_Checklist.md)

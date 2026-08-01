@@ -1,0 +1,29 @@
+---
+description: Permanent GH-X gold-standard mockup framing — never zoom tighter than approved listing mockups
+alwaysApply: true
+---
+
+# GH-X Mockup Framing Gold Standard
+
+The approved Harbor & Home / Gathered Days listing mockup framing is the **default for every future digital product** unless the user explicitly requests a different style.
+
+## Hard rules
+
+- Keep approximately the same camera distance and framing as the approved mockup.
+- Show the **entire** planner/binder page with comfortable margins.
+- **Never** crop page titles, checklists, tables, forms, or text.
+- Buyers must be able to read headings and most page content.
+- Close-ups may feel premium but must stay readable — no tighter than gold-standard distance.
+- All listing images use this framing/aspect unless a lifestyle scene truly requires otherwise.
+- Before `READY_TO_SELL`, verify no text is cut off; regenerate any over-zoomed mockup automatically.
+
+## Implementation (GH-X repo)
+
+- Shared module: `ServiceFlowAI/ghx-smoke-heygen/ghx_image_standard.py`
+- Use `fit_page()`, `make_closeup()`, `make_listing_page()`, `assert_ready_to_sell_images()`
+- Close-up boxes must keep ≥ **92%** of page width and height visible
+
+```text
+❌ BAD: tight crop; titles/footers cut off; extreme zoom
+✅ GOOD: full page with margins; headings and body readable
+```
