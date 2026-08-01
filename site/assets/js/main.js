@@ -26,15 +26,15 @@
     var key = link.getAttribute("data-nav");
     var active = false;
 
-    if (key === "home" && (file === "index.html" || file === "" || path.endsWith("/site"))) {
+    if (key === "home" && (path === "/" || file === "index.html" || file === "")) {
       active = true;
-    } else if (key === "projects" && (path.indexOf("/projects") !== -1 || file === "projects")) {
+    } else if (key === "projects" && path.indexOf("/projects") !== -1) {
       active = true;
-    } else if (key === "resume" && file === "resume.html") {
+    } else if (key === "resume" && (file === "resume.html" || file === "resume")) {
       active = true;
-    } else if (key === "about" && file === "about.html") {
+    } else if (key === "about" && (file === "about.html" || file === "about")) {
       active = true;
-    } else if (key === "contact" && file === "contact.html") {
+    } else if (key === "contact" && (file === "contact.html" || file === "contact")) {
       active = true;
     }
 

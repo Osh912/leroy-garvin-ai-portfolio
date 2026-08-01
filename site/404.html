@@ -10,32 +10,16 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"></noscript>
-  <link rel="stylesheet" href="assets/css/styles.css">
-  <script>
-    /* Fix relative asset paths when served from nested 404 URLs on static hosts */
-    (function () {
-      var depth = (location.pathname.replace(/\/[^/]*$/, "").match(/\//g) || []).length;
-      if (depth > 1) {
-        var prefix = new Array(depth).join("../");
-        document.querySelectorAll('link[href^="assets/"], script[src^="assets/"]').forEach(function (el) {
-          var attr = el.hasAttribute("href") ? "href" : "src";
-          el.setAttribute(attr, prefix + el.getAttribute(attr));
-        });
-        document.querySelectorAll('a[href="index.html"], a[href="projects/index.html"], a[href="contact.html"]').forEach(function (a) {
-          a.setAttribute("href", prefix + a.getAttribute("href"));
-        });
-      }
-    })();
-  </script>
+  <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body>
   <main class="error-page" id="main">
     <h1>404</h1>
     <p>That page isn’t in this portfolio. Try the home page or projects index.</p>
     <p>
-      <a class="btn btn-primary" href="index.html">Home</a>
-      <a class="btn btn-secondary" href="projects/index.html" style="margin-left:0.5rem">Projects</a>
-      <a class="btn btn-secondary" href="contact.html" style="margin-left:0.5rem">Contact</a>
+      <a class="btn btn-primary" href="/">Home</a>
+      <a class="btn btn-secondary" href="/projects/" style="margin-left:0.5rem">Projects</a>
+      <a class="btn btn-secondary" href="/contact.html" style="margin-left:0.5rem">Contact</a>
     </p>
   </main>
 </body>
