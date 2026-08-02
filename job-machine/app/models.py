@@ -55,5 +55,6 @@ class Application(Base):
     interview_prep: Mapped[str] = mapped_column(Text, default="{}")
     portfolio_refs: Mapped[str] = mapped_column(Text, default="[]")
     application_score: Mapped[float] = mapped_column(Float, default=0.0)
+    analytics_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

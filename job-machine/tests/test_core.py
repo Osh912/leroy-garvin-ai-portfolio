@@ -228,20 +228,27 @@ def test_interview_prep_has_required_sections():
 
 
 def test_pipeline_stages_include_interview_path():
-    from app.services.pipeline_stages import PIPELINE_STAGES
+    from app.services.pipeline_stages import PIPELINE_STAGES, is_valid_status
 
     for stage in [
         "saved",
         "ready",
         "applied",
-        "recruiter_contact",
-        "first_interview",
+        "recruiter_viewed",
+        "recruiter_replied",
+        "phone_screen",
         "technical_interview",
+        "hiring_manager",
         "final_interview",
         "offer",
+        "accepted",
         "rejected",
+        "withdrawn",
     ]:
         assert stage in PIPELINE_STAGES
+    # Legacy statuses remain accepted via aliases
+    assert is_valid_status("recruiter_contact")
+    assert is_valid_status("first_interview")
 
 
 def test_truth_guard_flags_senior_engineer():

@@ -23,13 +23,15 @@ def init_db() -> None:
     from sqlalchemy import text
 
     Base.metadata.create_all(bind=engine)
-    # Lightweight SQLite column add for interview_prep on existing DBs
+    # Lightweight SQLite column adds for existing DBs
     if settings.database_url.startswith("sqlite"):
         with engine.connect() as conn:
             cols = {row[1] for row in conn.execute(text("PRAGMA table_info(applications)"))}
             if "interview_prep" not in cols:
                 conn.execute(text("ALTER TABLE applications ADD COLUMN interview_prep TEXT DEFAULT '{}'"))
-                conn.commit()
+            if "analytics_json" not in cols:
+                conn.execute(text("ALTER TABLE applications ADD COLUMN analytics_json TEXT DEFAULT '{}'"))
+            conn.commit()
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -23,7 +23,7 @@ from app.schemas import (
 from app.services.cover_letter import generate_cover_letter
 from app.services.filters import level_hint
 from app.services.job_finder import purge_unverified_remote, search_jobs, upsert_jobs
-from app.services.pipeline_stages import PORTFOLIO_URL, PIPELINE_STAGES, stage_label
+from app.services.pipeline_stages import PORTFOLIO_URL, PIPELINE_STAGES, is_valid_status, stage_label
 from app.services.portfolio_matcher import match_portfolio
 from app.services.resume_tailor import tailor_resume
 from app.services.scorer import score_job
@@ -108,6 +108,10 @@ def _app_out(row: Application) -> ApplicationOut:
         prep = json.loads(getattr(row, "interview_prep", None) or "{}")
     except json.JSONDecodeError:
         prep = {}
+    try:
+        analytics = json.loads(getattr(row, "analytics_json", None) or "{}")
+    except json.JSONDecodeError:
+        analytics = {}
     ip = float(row.application_score or 0)
     return ApplicationOut(
         id=row.id,
@@ -127,6 +131,7 @@ def _app_out(row: Application) -> ApplicationOut:
         tailored_resume=row.tailored_resume,
         cover_letter=row.cover_letter,
         interview_prep=prep if isinstance(prep, dict) else {},
+        analytics=analytics if isinstance(analytics, dict) else {},
         portfolio_refs=json.loads(row.portfolio_refs or "[]"),
         application_score=row.application_score,
         interview_probability=ip,
@@ -135,6 +140,7 @@ def _app_out(row: Application) -> ApplicationOut:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
 
 
 @router.post("/jobs/search")
@@ -424,12 +430,22 @@ def update_application(app_id: int, payload: ApplicationUpdate, db: Session = De
         data["portfolio_refs"] = json.dumps(data["portfolio_refs"])
     if "interview_prep" in data and data["interview_prep"] is not None:
         data["interview_prep"] = json.dumps(data["interview_prep"])
+    if "analytics" in data and data["analytics"] is not None:
+        # merge into analytics_json
+        try:
+            existing = json.loads(getattr(row, "analytics_json", None) or "{}")
+        except json.JSONDecodeError:
+            existing = {}
+        if not isinstance(existing, dict):
+            existing = {}
+        existing.update(data.pop("analytics") or {})
+        data["analytics_json"] = json.dumps(existing)
     if "status" in data and data["status"] == "applied" and row.status != "applied":
         raise HTTPException(
             400,
             "Use POST /api/applications/{id}/approve to mark Applied. Auto-apply is disabled.",
         )
-    if "status" in data and data["status"] not in PIPELINE_STAGES:
+    if "status" in data and data["status"] is not None and not is_valid_status(data["status"]):
         raise HTTPException(400, f"Invalid stage. Use one of: {', '.join(PIPELINE_STAGES)}")
     for k, v in data.items():
         setattr(row, k, v)
@@ -447,7 +463,7 @@ def track_from_job(job_id: int, status: str = "ready", db: Session = Depends(get
             400,
             "Cannot auto-apply. Create as 'ready' or 'saved', then POST /api/applications/{id}/approve.",
         )
-    if status not in PIPELINE_STAGES:
+    if status not in PIPELINE_STAGES and not is_valid_status(status):
         raise HTTPException(400, f"Invalid stage. Use one of: {', '.join(PIPELINE_STAGES)}")
     job = db.get(Job, job_id)
     if not job:
@@ -688,3 +704,78 @@ def export_job(job_id: int, db: Session = Depends(get_db)):
         title=job.title if job else "role",
     )
     return ExportOut(job_id=job_id, **bundle)
+
+
+@router.get("/analytics")
+def recruiter_analytics(db: Session = Depends(get_db)):
+    from app.services.recruiter_analytics import build_analytics_dashboard
+
+    return build_analytics_dashboard(db)
+
+
+@router.get("/analytics/followups")
+def analytics_followups(db: Session = Depends(get_db)):
+    from app.services.recruiter_analytics import build_followups, load_applications
+
+    return {
+        "auto_send": False,
+        "approval_required": True,
+        "followups": build_followups(load_applications(db)),
+    }
+
+
+@router.post("/analytics/followups/{app_id}/approve")
+def approve_followup_email(
+    app_id: int,
+    cadence_days: int = Query(3, ge=3, le=14),
+    db: Session = Depends(get_db),
+):
+    from app.services.recruiter_analytics import approve_followup
+
+    if cadence_days not in {3, 7, 14}:
+        raise HTTPException(400, "cadence_days must be 3, 7, or 14")
+    try:
+        return approve_followup(db, app_id, cadence_days)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/analytics/export/{fmt}")
+def analytics_export(fmt: str, db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+
+    from app.services.recruiter_analytics import (
+        export_csv,
+        export_excel_bytes,
+        export_json,
+        export_pdf_bytes,
+        load_applications,
+    )
+
+    fmt = (fmt or "").lower().strip()
+    apps = load_applications(db)
+    if fmt == "csv":
+        return Response(
+            content=export_csv(apps),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=recruiter_analytics.csv"},
+        )
+    if fmt == "json":
+        return Response(
+            content=export_json(db),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=recruiter_analytics.json"},
+        )
+    if fmt in {"xlsx", "excel"}:
+        return Response(
+            content=export_excel_bytes(apps),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=recruiter_analytics.xlsx"},
+        )
+    if fmt == "pdf":
+        return Response(
+            content=export_pdf_bytes(db),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=recruiter_analytics.pdf"},
+        )
+    raise HTTPException(400, "Supported formats: csv, excel, xlsx, pdf, json")

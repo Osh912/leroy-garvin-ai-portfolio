@@ -19,15 +19,30 @@
     "saved",
     "ready",
     "applied",
-    "recruiter_contact",
-    "first_interview",
+    "recruiter_viewed",
+    "recruiter_replied",
+    "phone_screen",
     "technical_interview",
+    "hiring_manager",
     "final_interview",
     "offer",
+    "accepted",
     "rejected",
+    "withdrawn",
   ];
 
-  const state = { jobs: [], apps: [], packets: [], quick: new Set() };
+  const STAGE_ALIASES = {
+    recruiter_contact: "recruiter_replied",
+    first_interview: "phone_screen",
+    interview: "phone_screen",
+  };
+
+  const state = { jobs: [], apps: [], packets: [], quick: new Set(), charts: [] };
+
+  function normalizeStage(s) {
+    const key = String(s || "saved").toLowerCase().replaceAll(" ", "_");
+    return STAGE_ALIASES[key] || key;
+  }
 
   function switchView(name) {
     $$(".view").forEach((v) => v.classList.remove("active"));
@@ -261,8 +276,10 @@
     state.apps = apps.filter((a) => !/acme|example|demo company|test company/i.test(a.company));
     $("#tracker-table tbody").innerHTML = state.apps
       .map((a) => {
+        const current = normalizeStage(a.status);
         const opts = STAGES.map(
-          (s) => `<option value="${s}" ${s === a.status ? "selected" : ""}>${s.replaceAll("_", " ")}</option>`
+          (s) =>
+            `<option value="${s}" ${s === current ? "selected" : ""}>${s.replaceAll("_", " ")}</option>`
         ).join("");
         return `<tr data-id="${a.id}">
           <td>${escapeHtml(a.company)}</td>
@@ -281,6 +298,265 @@
         </tr>`;
       })
       .join("");
+  }
+
+  function fmtVal(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "number") return Number.isInteger(v) ? String(v) : String(v);
+    return String(v);
+  }
+
+  function destroyCharts() {
+    (state.charts || []).forEach((c) => {
+      try {
+        c.destroy();
+      } catch (_) {
+        /* ignore */
+      }
+    });
+    state.charts = [];
+  }
+
+  function makeChart(canvasId, type, labels, values, label) {
+    if (typeof Chart === "undefined") return;
+    const el = document.getElementById(canvasId);
+    if (!el) return;
+    const chart = new Chart(el, {
+      type,
+      data: {
+        labels,
+        datasets: [
+          {
+            label: label || "",
+            data: values.map((v) => (v == null ? 0 : v)),
+            backgroundColor: "rgba(47, 93, 69, 0.45)",
+            borderColor: "rgba(47, 93, 69, 0.95)",
+            borderWidth: 1.5,
+            tension: 0.25,
+            fill: type === "line",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: type === "doughnut" || type === "pie" ? {} : { y: { beginAtZero: true } },
+      },
+    });
+    state.charts.push(chart);
+  }
+
+  async function loadAnalytics() {
+    const data = await api("/api/analytics");
+    $("#analytics-meta").textContent =
+      `Sample size: ${data.sample_size} · Generated ${fmtDate(data.generated_at)} · Fabricated: ${data.fabricated} · Auto-send follow-ups: off`;
+
+    const kpiLabels = {
+      applications_submitted_today: "Applications Submitted Today",
+      applications_this_week: "Applications This Week",
+      applications_this_month: "Applications This Month",
+      recruiter_replies: "Recruiter Replies",
+      recruiter_response_rate: "Recruiter Response Rate %",
+      interview_invitations: "Interview Invitations",
+      recruiter_screens: "Recruiter Screens",
+      technical_interviews: "Technical Interviews",
+      final_interviews: "Final Interviews",
+      job_offers: "Job Offers",
+      rejections: "Rejections",
+      ghosted_applications: "Ghosted Applications",
+      follow_ups_due: "Follow-ups Due",
+      average_days_until_response: "Avg Days Until Response",
+      average_days_until_interview: "Avg Days Until Interview",
+      offer_rate: "Offer Rate %",
+      interview_rate: "Interview Rate %",
+      resume_download_count: "Resume Download Count",
+    };
+    $("#analytics-kpis").innerHTML = Object.entries(kpiLabels)
+      .map(([k, label]) => {
+        const v = data.kpis?.[k];
+        return `<div class="stat"><div class="n">${fmtVal(v)}</div><div class="l">${label}</div></div>`;
+      })
+      .join("");
+
+    $("#analytics-insights").innerHTML = (data.insights || [])
+      .map((line) => `<li>${escapeHtml(line)}</li>`)
+      .join("");
+
+    const sm = data.success_metrics || {};
+    const verLabel = (v) =>
+      v && v.version
+        ? `${v.version} (${v.reply_rate ?? 0}% replies · ${v.applications} apps)`
+        : "";
+    const smRows = [
+      ["Best Performing Resume Version", verLabel(sm.best_performing_resume_version)],
+      ["Best Performing Cover Letter", verLabel(sm.best_performing_cover_letter)],
+      [
+        "Highest Response Companies",
+        (sm.highest_response_companies || [])
+          .map((x) => `${x.company} (${x.rate ?? 0}%)`)
+          .join(", "),
+      ],
+      [
+        "Highest Interview Companies",
+        (sm.highest_interview_companies || [])
+          .map((x) => `${x.company} (${x.rate ?? 0}%)`)
+          .join(", "),
+      ],
+      [
+        "Highest Salary Companies",
+        (sm.highest_salary_companies || [])
+          .map((x) => `${x.company} ($${Math.round(x.average_salary || 0)})`)
+          .join(", "),
+      ],
+      [
+        "Most Responsive Recruiters",
+        (sm.most_responsive_recruiters || [])
+          .map((x) => `${x.recruiter} (${x.replies})`)
+          .join(", "),
+      ],
+      [
+        "Fastest Interview Response",
+        (sm.fastest_interview_response || [])
+          .map((x) => `${x.company} (${x.days}d)`)
+          .join(", "),
+      ],
+      [
+        "Average Salary of Interviews",
+        sm.average_salary_of_interviews != null
+          ? `$${Math.round(sm.average_salary_of_interviews)}`
+          : "",
+      ],
+      [
+        "Average Salary of Offers",
+        sm.average_salary_of_offers != null ? `$${Math.round(sm.average_salary_of_offers)}` : "",
+      ],
+    ];
+    $("#analytics-success").innerHTML = smRows
+      .map(
+        ([l, v]) =>
+          `<div class="metric-row"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v || "Insufficient data")}</strong></div>`
+      )
+      .join("");
+
+    const ia = data.interview_analytics || {};
+    $("#analytics-interview").innerHTML = [
+      ["Behavioral pass rate %", ia.behavioral_interview_pass_rate],
+      ["Technical pass rate %", ia.technical_interview_pass_rate],
+      ["Questions asked most often", (ia.questions_asked_most_often || []).map((q) => q.question).join("; ")],
+      ["Weakest topics", (ia.weakest_interview_topics || []).map((t) => t.topic).join("; ")],
+      ["Strongest topics", (ia.strongest_interview_topics || []).map((t) => t.topic).join("; ")],
+      ["Coding-question companies", (ia.companies_that_ask_coding_questions || []).join(", ")],
+      ["Multi-round companies", (ia.companies_with_multiple_interview_rounds || []).map((c) => c.company).join(", ")],
+    ]
+      .map(([l, v]) => `<div class="metric-row"><span>${escapeHtml(l)}</span><strong>${escapeHtml(fmtVal(v) || "—")}</strong></div>`)
+      .join("") + `<p class="note">${escapeHtml(ia.note || "")}</p>`;
+
+    const reports = data.reports || {};
+    const weekly = reports.weekly_job_search_report || {};
+    const monthly = reports.monthly_performance_report || {};
+    $("#analytics-reports").innerHTML = `
+      <div class="metric-row"><span>Weekly applications</span><strong>${fmtVal(weekly.applications)}</strong></div>
+      <div class="metric-row"><span>Weekly replies / interviews / offers</span><strong>${fmtVal(weekly.replies)} / ${fmtVal(weekly.interviews)} / ${fmtVal(weekly.offers)}</strong></div>
+      <div class="metric-row"><span>Monthly response / interview / offer %</span><strong>${fmtVal(monthly.response_rate)} / ${fmtVal(monthly.interview_rate)} / ${fmtVal(monthly.offer_rate)}</strong></div>
+      <div class="metric-row"><span>By company</span><strong>${escapeHtml(Object.keys(reports.applications_by_company || {}).slice(0, 6).join(", ") || "—")}</strong></div>
+      <div class="metric-row"><span>By role</span><strong>${escapeHtml(Object.keys(reports.applications_by_role || {}).slice(0, 6).join(", ") || "—")}</strong></div>
+    `;
+
+    $("#analytics-followups").innerHTML =
+      (data.followups || [])
+        .map(
+          (f) => `<article class="job-card followup-card">
+            <div class="job-card-top">
+              <div>
+                <h3>${escapeHtml(f.company)} — ${escapeHtml(f.position)}</h3>
+                <p class="meta">${f.days_since_application} days since apply · ${f.recommended_cadence_days}-day cadence · ${escapeHtml(f.status)}</p>
+              </div>
+              <div class="card-actions">
+                ${
+                  f.status === "pending_approval"
+                    ? `<button type="button" class="btn primary" data-action="approve-followup" data-id="${f.application_id}" data-cadence="${f.recommended_cadence_days}">Approve draft</button>`
+                    : `<span class="package-ready">Approved — send manually</span>`
+                }
+                <button type="button" class="btn" data-action="copy-followup" data-id="${f.application_id}">Copy email</button>
+              </div>
+            </div>
+            <pre class="followup-body">${escapeHtml(`Subject: ${f.subject}\n\n${f.body}`)}</pre>
+          </article>`
+        )
+        .join("") ||
+      "<p class='note'>No follow-ups due. Recommendations appear 3 / 7 / 14 days after Applied.</p>";
+
+    destroyCharts();
+    const charts = data.charts || {};
+    $("#analytics-charts").innerHTML = [
+      ["chart-apps-time", "Applications over time"],
+      ["chart-by-company", "Applications by company"],
+      ["chart-by-role", "Applications by role"],
+      ["chart-salary", "Salary distribution"],
+      ["chart-funnel", "Interview funnel"],
+      ["chart-response", "Response rate trend"],
+    ]
+      .map(
+        ([id, title]) =>
+          `<div class="chart-card"><h3>${title}</h3><div class="chart-wrap"><canvas id="${id}"></canvas></div></div>`
+      )
+      .join("");
+
+    makeChart(
+      "chart-apps-time",
+      "line",
+      charts.applications_over_time?.labels || [],
+      charts.applications_over_time?.values || [],
+      "Applications"
+    );
+    makeChart(
+      "chart-by-company",
+      "bar",
+      charts.applications_by_company?.labels || [],
+      charts.applications_by_company?.values || [],
+      "Apps"
+    );
+    makeChart(
+      "chart-by-role",
+      "bar",
+      charts.applications_by_role?.labels || [],
+      charts.applications_by_role?.values || [],
+      "Apps"
+    );
+    makeChart(
+      "chart-salary",
+      "bar",
+      charts.salary_distribution?.buckets?.labels || [],
+      charts.salary_distribution?.buckets?.values || [],
+      "Count"
+    );
+    makeChart(
+      "chart-funnel",
+      "bar",
+      charts.interview_funnel?.labels || [],
+      charts.interview_funnel?.values || [],
+      "Count"
+    );
+    makeChart(
+      "chart-response",
+      "line",
+      charts.response_rate_trend?.labels || [],
+      charts.response_rate_trend?.values || [],
+      "Response %"
+    );
+  }
+
+  async function downloadAnalyticsExport(fmt) {
+    const res = await fetch(`/api/analytics/export/${fmt}`);
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recruiter_analytics.${fmt === "xlsx" ? "xlsx" : fmt}`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function loadPacketsFromReady() {
@@ -381,6 +657,25 @@
       switchView(tab.dataset.view);
       if (tab.dataset.view === "pipeline") loadPacketsFromReady();
       if (tab.dataset.view === "tracker") loadTracker();
+      if (tab.dataset.view === "analytics") loadAnalytics().catch((err) => {
+        $("#analytics-meta").textContent = String(err.message || err);
+      });
+    })
+  );
+
+  $("#btn-refresh-analytics")?.addEventListener("click", () =>
+    loadAnalytics().catch((err) => {
+      $("#analytics-meta").textContent = String(err.message || err);
+    })
+  );
+
+  document.querySelectorAll("[data-export]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      try {
+        await downloadAnalyticsExport(btn.dataset.export);
+      } catch (err) {
+        alert(String(err.message || err));
+      }
     })
   );
 
@@ -481,6 +776,23 @@
       }
       if (action === "export-app") await exportApp(id);
       if (action === "export-job") await exportJob(id);
+      if (action === "approve-followup") {
+        const cadence = Number(btn.dataset.cadence || 3);
+        if (!confirm("Approve this follow-up draft? Nothing will be emailed automatically.")) return;
+        const result = await api(
+          `/api/analytics/followups/${id}/approve?cadence_days=${cadence}`,
+          { method: "POST" }
+        );
+        await navigator.clipboard.writeText(`Subject: ${result.subject}\n\n${result.body}`);
+        alert(result.message || "Approved. Email copied — send manually.");
+        await loadAnalytics();
+      }
+      if (action === "copy-followup") {
+        const card = btn.closest(".followup-card");
+        const text = card?.querySelector(".followup-body")?.textContent || "";
+        await navigator.clipboard.writeText(text);
+        alert("Follow-up email copied.");
+      }
       if (action === "open-app") {
         const apps = state.apps.length ? state.apps : await api("/api/applications");
         const app = apps.find((a) => a.id === id);

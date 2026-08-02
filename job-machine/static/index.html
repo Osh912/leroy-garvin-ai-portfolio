@@ -14,6 +14,7 @@
     </div>
     <nav class="tabs" aria-label="Primary">
       <button type="button" class="tab active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="tab" data-view="analytics">Recruiter Analytics</button>
       <button type="button" class="tab" data-view="pipeline">Top 10 Packets</button>
       <button type="button" class="tab" data-view="tracker">Interview Tracker</button>
       <button type="button" class="tab" data-view="jobs">Job Finder</button>
@@ -58,6 +59,49 @@
       <p class="note" id="pipeline-note">Auto-apply is off. Packets save under <code>data/interview_packets/</code>.</p>
     </section>
 
+    <section id="view-analytics" class="view">
+      <div class="section-head row">
+        <div>
+          <h1>Recruiter Analytics</h1>
+          <p>Real tracked data only · Never invents stats · Follow-ups require your approval</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" data-export="csv">CSV</button>
+          <button type="button" class="btn" data-export="xlsx">Excel</button>
+          <button type="button" class="btn" data-export="pdf">PDF</button>
+          <button type="button" class="btn" data-export="json">JSON</button>
+          <button type="button" class="btn primary" id="btn-refresh-analytics">Refresh</button>
+        </div>
+      </div>
+      <p class="note" id="analytics-meta">Sample size: —</p>
+      <div class="stat-grid dense" id="analytics-kpis"></div>
+      <div class="split analytics-split">
+        <div>
+          <h2>AI Insights</h2>
+          <ul class="insight-list" id="analytics-insights"></ul>
+        </div>
+        <div>
+          <h2>Success Metrics</h2>
+          <div id="analytics-success" class="metric-panel"></div>
+        </div>
+      </div>
+      <h2>Charts</h2>
+      <div class="chart-grid" id="analytics-charts"></div>
+      <h2>Follow-up Engine</h2>
+      <p class="note">Recommended at 3 / 7 / 14 days. Drafts only — never auto-sent.</p>
+      <div id="analytics-followups" class="card-list"></div>
+      <div class="split analytics-split">
+        <div>
+          <h2>Interview Analytics</h2>
+          <div id="analytics-interview" class="metric-panel"></div>
+        </div>
+        <div>
+          <h2>Reports</h2>
+          <div id="analytics-reports" class="metric-panel"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="view-pipeline" class="view">
       <div class="section-head">
         <h1>Top 10 Application Packets</h1>
@@ -69,7 +113,7 @@
     <section id="view-tracker" class="view">
       <div class="section-head">
         <h1>Interview Tracker</h1>
-        <p>Saved → Ready → Applied → Recruiter Contact → First → Technical → Final → Offer / Rejected</p>
+        <p>Saved → Ready → Applied → Recruiter Viewed → Replied → Phone Screen → Technical → Hiring Manager → Final → Offer / Accepted / Rejected / Withdrawn</p>
       </div>
       <div class="table-wrap">
         <table id="tracker-table">
@@ -150,6 +194,7 @@
     <div id="detail-body"></div>
   </dialog>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

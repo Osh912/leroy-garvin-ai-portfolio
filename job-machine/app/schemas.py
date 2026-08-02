@@ -93,6 +93,7 @@ class ApplicationUpdate(BaseModel):
     tailored_resume: str | None = None
     cover_letter: str | None = None
     interview_prep: dict[str, Any] | None = None
+    analytics: dict[str, Any] | None = None
     portfolio_refs: list[dict[str, Any]] | None = None
     application_score: float | None = None
 
@@ -115,6 +116,7 @@ class ApplicationOut(BaseModel):
     tailored_resume: str
     cover_letter: str
     interview_prep: dict[str, Any] = Field(default_factory=dict)
+    analytics: dict[str, Any] = Field(default_factory=dict)
     portfolio_refs: list[dict[str, Any]]
     application_score: float
     interview_probability: float = 0
