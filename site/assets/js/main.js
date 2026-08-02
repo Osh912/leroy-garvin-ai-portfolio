@@ -8,12 +8,14 @@
     toggle.addEventListener("click", function () {
       var open = navList.classList.toggle("is-open");
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     });
 
     navList.querySelectorAll("a").forEach(function (link) {
       link.addEventListener("click", function () {
         navList.classList.remove("is-open");
         toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-label", "Open menu");
       });
     });
   }

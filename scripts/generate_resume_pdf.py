@@ -154,14 +154,11 @@ def build():
     story.append(Paragraph("PROFESSIONAL SUMMARY", s["h2"]))
     story.append(
         Paragraph(
-            "Owner and AI Operations Specialist at Right Outside Auto Detailing LLC. Design, test, "
-            "and document AI-assisted customer workflows and no-code automation with n8n and Airtable. "
-            "Hands-on implementation across GH-X digital product automation (23 workflows / 8 stages), "
-            "a 10-stage AI voice booking assistant, Harbor &amp; Home product packaging, and LawOne AI "
-            "platform foundations (in development). Strong fit for AI Operations Specialist, Workflow "
-            "Automation Specialist, AI Implementation Specialist, AI Support Specialist, Technical "
-            "Support Specialist, Conversational AI QA, No-Code / Low-Code Automation Specialist, and "
-            "Remote Operations Specialist roles.",
+            "I help companies design, test, and run AI-assisted business workflows. Owner and AI "
+            "Operations Specialist at Right Outside Auto Detailing LLC. Hands-on delivery across GH-X "
+            "(23 workflows / 8 stages), a 10-stage AI voice booking assistant, Harbor &amp; Home product "
+            "packaging (66 pages, 8 videos), and LawOne AI foundations (in development). Available for "
+            "remote AI Operations, Automation, Technical Support, and AI Implementation roles.",
             s["body"],
         )
     )

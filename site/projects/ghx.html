@@ -36,7 +36,7 @@
         <span class="nav-brand-name">Leroy Garvin Jr</span>
         <span class="nav-brand-sub">AI Automation | AI Operations | Workflow Automation</span>
       </a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">Menu</button>
       <nav id="site-nav" aria-label="Primary">
         <ul class="nav-list">
           <li><a href="/" data-nav="home">Home</a></li>
@@ -53,7 +53,7 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / GH-X</p>
       <h1>GH-X Automation System</h1>
-      <p class="lede">Digital product operations automation: idea → assets → Etsy draft publishing → social/video → feedback → reliability.</p>
+      <p class="lede">I automated the handoff from product idea to listing-ready package so digital products can move through production with clearer stages and fewer skipped steps.</p>
       <div class="badge-row"><span class="badge">Functional Build</span><span class="badge">23 workflows</span><span class="badge">Product outputs published</span></div>
       <ul class="tech-tags"><li>n8n</li><li>Airtable</li><li>OpenAI</li><li>Etsy API</li><li>Google Drive</li><li>HeyGen</li><li>Metricool</li></ul>
       <p style="margin-top:1rem">
@@ -69,29 +69,25 @@
         <div class="metric"><div class="metric-value">8</div><div class="metric-label">Campaign videos packaged</div></div>
       </div>
       <div class="prose case-block">
-        <h2>Problem</h2>
-        <p>Manual digital-product handoffs (ideas → listings → images → publish → social/video → measurement) are inconsistent, hard to QA, and easy to skip.</p>
-        <h2>Solution</h2>
-        <p>Designed an Airtable-centered queue pipeline orchestrated in n8n. Each stage reads work items, transforms or calls APIs, then writes status for the next stage — including Etsy draft listing creation and asset upload in the commerce stage.</p>
-        <h2>My role</h2>
-        <p>Independently designed process architecture, prompt/payload patterns, workflow definitions, and documentation for the end-to-end system.</p>
-        <h2>Tools used</h2>
-        <p>n8n, Airtable, OpenAI, Etsy API, Google Drive, HeyGen, Metricool, ChatGPT/Claude for prototyping and docs.</p>
-        <h2>Challenges</h2>
-        <p>Keeping stages reliable across many services; validating publish-ready rows; separating private credentials/JSON from recruiter evidence; avoiding over-claims about production traffic.</p>
-        <h2>What I improved</h2>
-        <p>Clearer stage boundaries, status writebacks, reliability/alerting mindset, and a repeatable READY_TO_SELL packaging checklist for product outputs.</p>
+
+        <h2>Problem solved</h2>
+        <p>Manual digital-product handoffs (idea → listing → images → publish → social → measurement) were inconsistent and easy to skip.</p>
+        <h2>What I built</h2>
+        <p>An 8-stage operations pipeline in n8n + Airtable that moves work through queues, creates draft Etsy listing packages, and tracks status for the next stage.</p>
+        <h2>Technologies used</h2>
+        <p>n8n, Airtable, OpenAI, Etsy API, Google Drive, HeyGen, Metricool.</p>
+        <h2>Why this matters to an employer</h2>
+        <p>You get someone who can turn messy multi-tool product ops into a documented, testable automation system — and ship real sell packages, not just diagrams.</p>
         <h2>Verified outcome</h2>
-        <p>23 Functional Build workflow definitions across 8 stages. Produced real customer-ready digital product packages (e.g. Harbor &amp; Home: 66-page PDF, mockups, listing creatives, 8 videos, READY_TO_SELL verification). Supported an Etsy draft publishing workflow in definitions. Public storefront: <a href="https://alignedvibesco.etsy.com" rel="noopener noreferrer" target="_blank">alignedvibesco.etsy.com</a> — sales volume is not claimed here.</p>
-        <h2>Idea-to-product pipeline</h2>
+        <p>23 workflow definitions across 8 stages. Produced Harbor &amp; Home READY_TO_SELL packages (66-page PDF, creatives, 8 videos). Live storefront: <a href="https://alignedvibesco.etsy.com" rel="noopener noreferrer" target="_blank">alignedvibesco.etsy.com</a>. Sales volume is not claimed.</p>
+        <h2>Pipeline overview</h2>
         <p class="diagram-note">Architecture diagram — not a live n8n canvas screenshot.</p>
       </div>
       <div class="diagram-frame">
         <img src="/assets/diagrams/ghx-pipeline.svg" alt="Architecture diagram of GH-X eight-stage idea to reliability pipeline" width="960" height="220" loading="lazy">
         <p class="diagram-caption">Architecture diagram of stages 1–8. Workflow JSON remains private.</p>
       </div>
-      <div class="prose"><h2>Customer-ready product evidence</h2>
-        <p>Harbor &amp; Home package outputs from the pipeline. Listing images are Etsy-style creatives from the sell package. Live shop: <a href="https://alignedvibesco.etsy.com" rel="noopener noreferrer" target="_blank">View Live Etsy Shop</a>.</p></div>
+      <div class="prose"><h2>Customer-ready product evidence</h2><p>Harbor &amp; Home outputs from the pipeline. <a href="https://alignedvibesco.etsy.com" rel="noopener noreferrer" target="_blank">View Live Etsy Shop</a>.</p></div>
       <div class="gallery">
         <figure><img src="/assets/images/ghx/cover.png" alt="Harbor and Home product cover from GH-X pipeline" width="400" height="300" loading="lazy"><figcaption>Cover</figcaption></figure>
         <figure><img src="/assets/images/ghx/lifestyle-mockup.png" alt="Lifestyle mockup of planner pages" width="400" height="300" loading="lazy"><figcaption>Lifestyle mockup</figcaption></figure>
@@ -103,6 +99,14 @@
         <figure><img src="/assets/images/evidence/GHX-01-System-Documentation.png" alt="Sanitized GH-X system documentation screenshot" width="400" height="480" loading="lazy"><figcaption>System documentation</figcaption></figure>
       </div>
       <div class="prose"><p><a href="/projects/">← All projects</a> · <a href="/projects/harbor.html">Harbor product</a> · <a href="/projects/n8n.html">n8n</a> · <a href="/projects/airtable.html">Airtable</a></p></div>
+      <div class="hire-cta" role="complementary" aria-label="Contact to interview">
+        <p><strong>Ready to interview?</strong> I am available for remote AI Operations, Automation, Technical Support, and AI Implementation roles.</p>
+        <p class="hire-cta-actions">
+          <a class="btn btn-primary" href="mailto:AlignedVibesCo@gmail.com">Email Leroy to Interview</a>
+          <a class="btn btn-secondary" href="/contact.html">Contact details</a>
+          <a class="btn btn-secondary" href="/assets/resume/Leroy_Garvin_Jr_AI_Operations_Resume.pdf" download>Download Resume</a>
+        </p>
+      </div>
     </div></section>
   </main>
 
