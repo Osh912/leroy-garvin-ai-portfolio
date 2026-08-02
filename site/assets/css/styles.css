@@ -17,7 +17,7 @@
   --border: rgba(28, 36, 32, 0.12);
   --shadow: 0 12px 40px rgba(28, 36, 32, 0.08);
   --radius: 10px;
-  --nav-h: 4.25rem;
+  --nav-h: 4.75rem;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "DM Sans", "Segoe UI", sans-serif;
   --max: 72rem;
@@ -109,17 +109,35 @@ a:hover {
 }
 
 .nav-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   color: var(--charcoal);
   text-decoration: none;
   letter-spacing: -0.01em;
+  line-height: 1.15;
+  max-width: min(22rem, 58vw);
+}
+
+.nav-brand-name {
+  color: var(--charcoal);
+  font-weight: 600;
+}
+
+.nav-brand-sub {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--olive);
+  line-height: 1.25;
 }
 
 .nav-brand span {
-  color: var(--olive);
-  font-weight: 500;
+  /* legacy fallback */
 }
 
 .nav-toggle {
@@ -308,8 +326,9 @@ main {
 .hero-support {
   font-size: 1.05rem;
   color: var(--ink-muted);
-  max-width: 32rem;
-  margin: 0 0 2rem;
+  max-width: 42rem;
+  margin: 0 0 1.25rem;
+  line-height: 1.6;
   opacity: 0;
   transform: translateY(1rem);
   animation: heroIn 0.9s var(--ease) 0.42s forwards;
@@ -335,7 +354,8 @@ main {
   .hero-brand,
   .hero-headline,
   .hero-support,
-  .hero-ctas {
+  .hero-ctas,
+  .role-fit {
     animation: none;
     opacity: 1;
     transform: none;
@@ -446,7 +466,15 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin: 0.75rem 0 0;
+  margin: 0.85rem 0 0;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  animation: heroIn 0.9s var(--ease) 0.48s forwards;
+}
+.role-fit.static {
+  opacity: 1;
+  transform: none;
+  animation: none;
 }
 
 .role-fit span {
@@ -882,5 +910,40 @@ main {
   .wrap {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+}
+
+
+/* Recruiter polish: card metric + brand mobile */
+.card-metric {
+  margin: 0.55rem 0 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--forest);
+}
+.project-card .tech-tags {
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+.project-card .card-link {
+  margin-top: 0.85rem;
+}
+@media (max-width: 720px) {
+  .nav-brand {
+    max-width: 11.5rem;
+  }
+  .nav-brand-sub {
+    font-size: 0.6rem;
+  }
+  .home-hero {
+    min-height: auto;
+    padding: 2.25rem 0 2.5rem;
+  }
+  .hero-support {
+    font-size: 0.98rem;
+  }
+  .hero-ctas .btn {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 9.5rem;
   }
 }
