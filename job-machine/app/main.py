@@ -6,6 +6,7 @@ from datetime import datetime, time
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -14,12 +15,26 @@ from app.routers.api import router as api_router
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
+EXTENSION_FIXTURES = ROOT.parent / "browser-extension" / "fixtures"
 logger = logging.getLogger("job_machine")
 
 app = FastAPI(
     title="Interview Pipeline — Leroy Garvin Jr",
     description="AI Interview Pipeline: verified remote jobs → packets → prep → tracker. Never auto-applies.",
     version="2.0.0",
+)
+
+# Local Safe Autofill companion (Chrome MV3) — localhost + extension origins only.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8787",
+        "http://localhost:8787",
+    ],
+    allow_origin_regex=r"^chrome-extension://[a-z]+$",
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 _refresh_task: asyncio.Task | None = None
@@ -74,6 +89,8 @@ async def on_shutdown() -> None:
 
 app.include_router(api_router)
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
+if EXTENSION_FIXTURES.exists():
+    app.mount("/fixtures", StaticFiles(directory=str(EXTENSION_FIXTURES)), name="fixtures")
 
 
 @app.get("/")

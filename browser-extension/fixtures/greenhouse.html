@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" data-jm-fixture-platform="greenhouse">
+<head><meta charset="utf-8"><title>Greenhouse Fixture</title></head>
+<body data-jm-fixture-platform="greenhouse">
+  <h1>Greenhouse Application Fixture</h1>
+  <form id="application-form">
+    <label>First Name <input id="first_name" name="job_application[first_name]"></label>
+    <label>Last Name <input id="last_name" name="job_application[last_name]"></label>
+    <label>Email <input id="email" name="job_application[email]" type="email"></label>
+    <label>Phone <input id="phone" name="job_application[phone]" type="tel"></label>
+    <label>LinkedIn Profile <input name="job_application[answers][linkedin]" id="linkedin"></label>
+    <label>Website <input name="job_application[answers][website]" id="website"></label>
+    <label>Resume <input type="file" name="resume" id="resume"></label>
+    <label>Cover Letter <input type="file" name="cover_letter" id="cover_letter"></label>
+    <label>Why are you interested in this role?
+      <textarea name="job_application[answers][why]" id="why"></textarea>
+    </label>
+    <label>Will you require sponsorship?
+      <select name="sponsorship" id="sponsorship"><option></option><option>Yes</option><option>No</option></select>
+    </label>
+    <label>Desired salary <input name="salary" id="salary"></label>
+    <button type="submit" id="submit">Submit Application</button>
+  </form>
+</body>
+</html>

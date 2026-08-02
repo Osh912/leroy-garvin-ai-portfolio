@@ -890,3 +890,148 @@ def assistant_offer(app_id: int, payload: dict, db: Session = Depends(get_db)):
         return update_offer(app_id, payload or {}, db)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
+
+
+# --- Safe Application Autofill (localhost companion) ---
+
+
+@router.get("/autofill/health")
+def autofill_health():
+    return {
+        "status": "ok",
+        "mode": "safe_autofill",
+        "auto_submit": False,
+        "captcha_bypass": False,
+        "local_only": True,
+        "api_base": "http://127.0.0.1:8787",
+    }
+
+
+@router.get("/autofill/active")
+def autofill_active():
+    from app.services.safe_autofill import get_active_session
+
+    session = get_active_session()
+    if not session:
+        return {"active": False, "session": None, "auto_submit": False}
+    return {"active": True, "session": session, "auto_submit": False}
+
+
+@router.post("/autofill/applications/{app_id}/open")
+def autofill_open(app_id: int, db: Session = Depends(get_db)):
+    from app.services.safe_autofill import open_application_session
+
+    try:
+        payload = open_application_session(app_id, db)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return payload
+
+
+@router.get("/autofill/applications/{app_id}/payload")
+def autofill_payload(app_id: int, db: Session = Depends(get_db)):
+    from app.services.safe_autofill import build_autofill_payload
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    return build_autofill_payload(row, db)
+
+
+@router.post("/autofill/applications/{app_id}/classify")
+def autofill_classify(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.safe_autofill import build_autofill_payload, classify_detected_fields
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    session = build_autofill_payload(row, db)
+    detected = (payload or {}).get("detected") or []
+    classification = classify_detected_fields(detected)
+    return {
+        "application_id": app_id,
+        "company": session["company"],
+        "position": session["position"],
+        "platform": session["platform"],
+        "files": session["files"],
+        "safety_check": session["safety_check"],
+        "classification": classification,
+        "requires_confirm_autofill": True,
+        "never_click_submit": True,
+        "auto_submit": False,
+    }
+
+
+@router.post("/autofill/applications/{app_id}/suggest-answer")
+def autofill_suggest(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.safe_autofill import suggest_answer
+
+    try:
+        return suggest_answer(app_id, (payload or {}).get("question") or "", db)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/autofill/applications/{app_id}/mark-submitted")
+def autofill_mark_submitted(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+    from app.services.safe_autofill import mark_submitted
+
+    body = payload or {}
+    try:
+        return mark_submitted(
+            app_id,
+            db,
+            application_url=body.get("application_url"),
+            platform=body.get("platform"),
+            notes=body.get("notes"),
+            resume_version=body.get("resume_version"),
+            cover_version=body.get("cover_version"),
+        )
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/applications/{app_id}/mark-submitted")
+def mark_application_submitted(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+    """Alias used by Job Machine UI after manual submit."""
+    return autofill_mark_submitted(app_id, payload, db)
+
+
+@router.get("/autofill/applications/{app_id}/files/{kind}")
+def autofill_download_file(app_id: int, kind: str, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
+    from app.services.safe_autofill import ensure_application_files, verify_file_belongs_to_application
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    job = db.get(Job, row.job_id) if row.job_id else None
+    files = ensure_application_files(row, job)
+    kind = (kind or "").lower()
+    path = None
+    media = "text/plain"
+    if kind == "resume":
+        path = files.get("resume_pdf") or files.get("resume_txt") or files.get("resume_md")
+        media = "application/pdf" if path and str(path).endswith(".pdf") else "text/plain"
+    elif kind == "cover":
+        path = files.get("cover_pdf") or files.get("cover_txt") or files.get("cover_md")
+        media = "application/pdf" if path and str(path).endswith(".pdf") else "text/plain"
+    else:
+        raise HTTPException(400, "kind must be resume or cover")
+    if not path:
+        raise HTTPException(404, "File not prepared. Run Prepare Application first.")
+    from pathlib import Path
+
+    p = Path(path)
+    if not p.exists() or not verify_file_belongs_to_application(app_id, p.name, db):
+        raise HTTPException(400, "File failed company/role verification — refusing download.")
+    return FileResponse(path=str(p), media_type=media, filename=p.name)
+
+
+@router.post("/autofill/log")
+def autofill_client_log(payload: dict):
+    from app.services.safe_autofill import _append_log
+
+    _append_log("extension", payload or {})
+    return {"ok": True, "telemetry": False}

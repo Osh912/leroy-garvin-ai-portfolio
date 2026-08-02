@@ -304,6 +304,8 @@
           <td class="row-actions">
             ${a.status === "ready" || a.status === "saved" ? `<button type="button" class="btn primary" data-action="approve" data-id="${a.id}">Approve</button>` : ""}
             <button type="button" class="btn" data-action="prepare-app" data-id="${a.job_id}">Prepare</button>
+            <button type="button" class="btn" data-action="open-application" data-id="${a.id}">Open App</button>
+            <button type="button" class="btn" data-action="mark-submitted" data-id="${a.id}">Submitted</button>
             <button type="button" class="btn" data-action="open-assistant" data-id="${a.id}">Assistant</button>
             <button type="button" class="btn" data-action="prep-app" data-id="${a.job_id}">Prep</button>
             <button type="button" class="btn" data-action="export-app" data-id="${a.id}">Export</button>
@@ -626,6 +628,8 @@
       <pre class="followup-body">${escapeHtml(app.cover_letter || "Not generated")}</pre>
       <div class="card-actions" style="margin-top:0.75rem">
         ${app.job_id ? `<button type="button" class="btn primary" data-action="prepare-app" data-id="${app.job_id}">Prepare Application</button>` : ""}
+        <button type="button" class="btn primary" data-action="open-application" data-id="${app.application_id}">Open Application</button>
+        <button type="button" class="btn" data-action="mark-submitted" data-id="${app.application_id}">Mark as Submitted</button>
         <button type="button" class="btn" data-action="export-app" data-id="${app.application_id}">Export Packet</button>
         ${
           app.status === "ready" || app.status === "saved"
@@ -1119,6 +1123,32 @@
           method: "DELETE",
         });
         await loadAssistant();
+      }
+      if (action === "open-application") {
+        const session = await api(`/api/autofill/applications/${id}/open`, { method: "POST" });
+        if (!session.application_url) {
+          alert("No application URL on this job.");
+          return;
+        }
+        window.open(session.application_url, "_blank", "noopener,noreferrer");
+        alert(
+          `Opened ${session.company} — ${session.position}\nPlatform: ${session.platform}\n\n` +
+            "In the browser extension: review the preview, then click Confirm Autofill.\n" +
+            "Submit is NEVER clicked for you. After you submit manually, click Mark as Submitted."
+        );
+        if (document.getElementById("view-assistant")?.classList.contains("active")) {
+          await loadAssistant();
+        }
+      }
+      if (action === "mark-submitted") {
+        if (!confirm("Mark as Submitted only after YOU manually submitted the application?")) return;
+        const notes = prompt("Optional submission notes:", "Manually submitted by Leroy.") || "";
+        const result = await api(`/api/applications/${id}/mark-submitted`, {
+          method: "POST",
+          body: JSON.stringify({ notes }),
+        });
+        alert(result.message || "Marked submitted.");
+        await Promise.all([loadDashboard(), loadTracker(), loadAssistant().catch(() => null)]);
       }
       if (action === "export-app") await exportApp(id);
       if (action === "export-job") await exportJob(id);

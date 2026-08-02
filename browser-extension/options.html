@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Safe Autofill Options</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1c2420; }
+    textarea { width: 100%; min-height: 160px; }
+    .note { color: #5a645e; }
+  </style>
+</head>
+<body>
+  <h1>Manual field-mapping corrections</h1>
+  <p class="note">Optional JSON map of label substring → autofill key. Stored locally in the extension only. Never synced remotely.</p>
+  <p>Allowed keys: first_name, last_name, email, phone, country, city, state, zip_code, linkedin, portfolio, github, current_job_title</p>
+  <textarea id="map" placeholder='{"Preferred Name":"first_name"}'></textarea>
+  <p><button id="save">Save locally</button> <span id="status"></span></p>
+  <script src="options.js"></script>
+</body>
+</html>

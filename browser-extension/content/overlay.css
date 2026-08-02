@@ -1,0 +1,101 @@
+#jm-safe-autofill-root {
+  all: initial;
+  position: fixed;
+  z-index: 2147483646;
+  top: 12px;
+  right: 12px;
+  width: min(420px, calc(100vw - 24px));
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: #1c2420;
+}
+
+#jm-safe-autofill-root * { box-sizing: border-box; font-family: inherit; }
+
+.jm-panel {
+  background: #f7f3ea;
+  border: 1px solid rgba(28, 36, 32, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 12px 14px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+
+.jm-panel h1 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.jm-panel .jm-sub {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #5a645e;
+  line-height: 1.35;
+}
+
+.jm-panel .jm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(28, 36, 32, 0.08);
+}
+
+.jm-panel .jm-row strong { text-align: right; max-width: 60%; word-break: break-word; }
+
+.jm-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.jm-btn {
+  border: 1px solid rgba(28, 36, 32, 0.2);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.jm-btn.primary {
+  background: #2f5d45;
+  border-color: #2f5d45;
+  color: #fff;
+}
+
+.jm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.jm-warn {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(138, 59, 45, 0.08);
+  border-left: 3px solid #8a3b2d;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.jm-ok {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(47, 93, 69, 0.1);
+  border-left: 3px solid #2f5d45;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.jm-list { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
+.jm-mini { font-size: 11px; color: #5a645e; margin-top: 6px; }
+
+input.jm-autofilled,
+textarea.jm-autofilled,
+select.jm-autofilled {
+  outline: 2px solid #2f5d45 !important;
+  background-color: rgba(47, 93, 69, 0.08) !important;
+}
+
+input.jm-manual-review,
+textarea.jm-manual-review,
+select.jm-manual-review {
+  outline: 2px dashed #8a3b2d !important;
+  background-color: rgba(138, 59, 45, 0.06) !important;
+}

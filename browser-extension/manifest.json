@@ -1,0 +1,75 @@
+{
+  "manifest_version": 3,
+  "name": "Job Machine Safe Autofill",
+  "version": "1.0.0",
+  "description": "Localhost-only autofill companion for Leroy Garvin Jr. Never auto-submits. Never bypasses CAPTCHA or security checks.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*",
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://*.lever.co/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.ashbyhq.com/*",
+    "https://jobs.smartrecruiters.com/*",
+    "https://*.smartrecruiters.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://*.workday.com/*",
+    "https://*.indeed.com/*",
+    "https://www.linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Job Machine Safe Autofill",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://*.lever.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://*.smartrecruiters.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.workday.com/*",
+        "https://*.indeed.com/*",
+        "https://www.linkedin.com/jobs/*",
+        "http://127.0.0.1:8787/fixtures/*",
+        "http://localhost:8787/fixtures/*"
+      ],
+      "js": [
+        "lib/api.js",
+        "lib/platform-detect.js",
+        "lib/safety.js",
+        "lib/field-mapper.js",
+        "adapters/greenhouse.js",
+        "adapters/lever.js",
+        "adapters/ashby.js",
+        "adapters/smartrecruiters.js",
+        "adapters/workday.js",
+        "adapters/indeed.js",
+        "adapters/linkedin.js",
+        "adapters/generic.js",
+        "content/content.js"
+      ],
+      "css": ["content/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

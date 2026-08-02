@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Safe Autofill</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 12px; width: 320px; color: #1c2420; background: #f7f3ea; }
+    h1 { font-size: 14px; margin: 0 0 6px; }
+    p { font-size: 12px; color: #5a645e; line-height: 1.4; }
+    .ok { color: #2f5d45; font-weight: 700; }
+    .bad { color: #8a3b2d; font-weight: 700; }
+    code { font-size: 11px; }
+    ul { font-size: 11px; padding-left: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Job Machine Safe Autofill</h1>
+  <p id="status">Checking localhost…</p>
+  <p>Workflow: Prepare Application → Open Application → Confirm Autofill → you submit → Mark as Submitted.</p>
+  <ul>
+    <li>Never auto-submits</li>
+    <li>Never bypasses CAPTCHA</li>
+    <li>Sensitive questions stay manual</li>
+    <li>No remote telemetry</li>
+  </ul>
+  <p><code>http://127.0.0.1:8787</code></p>
+  <script src="popup.js"></script>
+</body>
+</html>

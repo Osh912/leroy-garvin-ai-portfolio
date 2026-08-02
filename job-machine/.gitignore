@@ -4,5 +4,8 @@ __pycache__/
 .env
 data/*.db
 data/*.db-journal
+data/autofill_active_session.json
+data/autofill_activity.log
+data/interview_packets/
 .pytest_cache/
 .DS_Store
