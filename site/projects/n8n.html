@@ -4,7 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>n8n Workflow Automation — Leroy Garvin Jr</title>
-  <meta name="description" content="n8n orchestration inventory: 23 GH-X workflows, patterns, and services — Functional Build evidence.">
+  <meta name="description" content="n8n orchestration for GH-X: 23 workflows, branching, APIs, and error handling — Functional Build evidence.">
+  <link rel="canonical" href="https://leroy-garvin-ai-portfolio.vercel.app/projects/n8n.html">
+  <meta name="author" content="Leroy Garvin Jr">
+  <meta name="theme-color" content="#1c2420">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Leroy Garvin Jr — AI Operations">
+  <meta property="og:title" content="n8n Workflow Automation — Leroy Garvin Jr">
+  <meta property="og:description" content="n8n orchestration for GH-X: 23 workflows, branching, APIs, and error handling — Functional Build evidence.">
+  <meta property="og:url" content="https://leroy-garvin-ai-portfolio.vercel.app/projects/n8n.html">
+  <meta property="og:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="n8n Workflow Automation — Leroy Garvin Jr">
+  <meta name="twitter:description" content="n8n orchestration for GH-X: 23 workflows, branching, APIs, and error handling — Functional Build evidence.">
+  <meta name="twitter:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/images/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/images/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
@@ -34,42 +50,43 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / n8n</p>
       <h1>n8n Workflow Automation</h1>
-      <p class="lede">Orchestration capability demonstrated through the GH-X definition set — scheduled triggers, validation, branching, batching, HTTP APIs, and status writebacks — without publishing importable JSON.</p>
-      <div class="badge-row">
-        <span class="badge">Functional Build</span>
-        <span class="badge">23 workflows inventoried</span>
-      </div>
+      <p class="lede">Orchestration patterns used inside GH-X: triggers, validation, branching, batching, API calls, error handling, and status writebacks — without publishing importable JSON.</p>
+      <div class="badge-row"><span class="badge">Functional Build</span><span class="badge">23 workflows inventoried</span></div>
+      <ul class="tech-tags"><li>n8n</li><li>HTTP APIs</li><li>Error branches</li><li>Queues</li></ul>
     </div>
     <section class="section" style="padding-top:0"><div class="wrap">
-      <div class="prose"><h2>Measurable accomplishments</h2></div>
       <div class="metrics-grid">
-        <div class="metric"><div class="metric-value">23</div><div class="metric-label">Unique workflow exports documented</div></div>
-        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Pipeline stages covered</div></div>
-        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Services wired in definitions</div></div>
-        <div class="metric"><div class="metric-value">4+</div><div class="metric-label">Core orchestration patterns</div></div>
+        <div class="metric"><div class="metric-value">23</div><div class="metric-label">Workflows inventoried</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Stages covered</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Services in definitions</div></div>
+        <div class="metric"><div class="metric-value">IF/SW</div><div class="metric-label">Branch + batch patterns</div></div>
+      </div>
+      <div class="prose case-block">
+        <h2>Problem</h2>
+        <p>Multi-step product ops need consistent orchestration across queues, APIs, and failure paths.</p>
+        <h2>Solution</h2>
+        <p>n8n stage workflows: schedule/error triggers → validate queue items → optional AI/API work → branch on quality/status → write results to Airtable; reliability workflows for alerts/requeue.</p>
+        <h2>My role</h2>
+        <p>Designed and configured orchestration definitions and documented capability patterns for recruiter review.</p>
+        <h2>Tools used</h2>
+        <p>n8n (Schedule, Error, Code, IF/Switch, Split In Batches, HTTP), Airtable nodes, OpenAI/Etsy/HeyGen/Metricool/Drive via HTTP where defined.</p>
+        <h2>Challenges</h2>
+        <p>Keeping secrets out of the public pack; explaining complex systems without overstating production traffic (export active flags false in case study).</p>
+        <h2>What I improved</h2>
+        <p>Clearer validation-before-work, branching, and reliability mindset across stages.</p>
+        <h2>Verified outcome</h2>
+        <p>23 unique workflow exports documented at definition level. Public visuals are architecture/inventory diagrams — not live canvas captures with credentials.</p>
+        <p class="diagram-note">Architecture diagrams — not production n8n UI screenshots.</p>
       </div>
       <div class="diagram-frame">
-        <img src="/assets/diagrams/n8n-orchestration.svg" alt="n8n orchestration pattern diagram" width="800" height="200" loading="lazy">
-        <p class="diagram-caption">Capability view — Trigger → Validate → AI/API → Branch → Write.</p>
+        <img src="/assets/diagrams/n8n-orchestration.svg" alt="Architecture diagram of n8n trigger validate API branch write pattern" width="800" height="200" loading="lazy">
+        <p class="diagram-caption">Orchestration pattern architecture diagram.</p>
       </div>
-      <div class="diagram-frame" style="margin-top:1rem">
-        <img src="/assets/diagrams/n8n-inventory.svg" alt="GH-X n8n workflow inventory across eight stages" width="960" height="460" loading="lazy">
-        <p class="diagram-caption">Definition-level inventory from the GH-X case study. JSON exports remain private.</p>
+      <div class="diagram-frame">
+        <img src="/assets/diagrams/n8n-inventory.svg" alt="Architecture diagram inventoring GH-X n8n workflows across eight stages" width="960" height="460" loading="lazy">
+        <p class="diagram-caption">Definition-level inventory across eight stages.</p>
       </div>
-      <div class="prose">
-        <h2>Patterns practiced</h2>
-        <ul>
-          <li>Schedule and error triggers</li>
-          <li>Queue item validation before work</li>
-          <li>Optional AI generation or HTTP API steps</li>
-          <li>Quality / status branching and Split In Batches</li>
-          <li>Status writes to Airtable for downstream stages</li>
-          <li>Reliability mindset: alerts, requeue / review</li>
-        </ul>
-        <h2>Services observed in definitions</h2>
-        <p>Airtable, OpenAI, Etsy API, Google Drive, HeyGen, Metricool.</p>
-        <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/airtable.html">Airtable</a></p>
-      </div>
+      <div class="prose"><p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/airtable.html">Airtable</a></p></div>
     </div></section>
   </main>
 
@@ -79,9 +96,10 @@
         <a href="mailto:AlignedVibesCo@gmail.com">AlignedVibesCo@gmail.com</a>
         <a href="tel:+19129016378">(912) 901-6378</a>
         <a href="https://www.linkedin.com/in/leroy-garvin-49443b423/" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+        <a href="/contact.html">Contact</a>
         <a href="/legal.html">Legal</a>
       </div>
-      <p class="footer-copy">© 2026 Leroy Garvin Jr</p>
+      <p class="footer-copy">© 2026 Leroy Garvin Jr · AI Operations portfolio</p>
     </div>
   </footer>
   <script src="/assets/js/main.js" defer></script>

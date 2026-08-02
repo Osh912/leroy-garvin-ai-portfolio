@@ -4,7 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Voice Booking Assistant — Leroy Garvin Jr</title>
-  <meta name="description" content="10-stage AI voice booking assistant with prompt engineering, QA, and published documentation screenshots.">
+  <meta name="description" content="10-stage AI voice booking assistant with prompt engineering, QA documentation, and structured booking flow.">
+  <link rel="canonical" href="https://leroy-garvin-ai-portfolio.vercel.app/projects/voice.html">
+  <meta name="author" content="Leroy Garvin Jr">
+  <meta name="theme-color" content="#1c2420">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Leroy Garvin Jr — AI Operations">
+  <meta property="og:title" content="AI Voice Booking Assistant — Leroy Garvin Jr">
+  <meta property="og:description" content="10-stage AI voice booking assistant with prompt engineering, QA documentation, and structured booking flow.">
+  <meta property="og:url" content="https://leroy-garvin-ai-portfolio.vercel.app/projects/voice.html">
+  <meta property="og:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Voice Booking Assistant — Leroy Garvin Jr">
+  <meta name="twitter:description" content="10-stage AI voice booking assistant with prompt engineering, QA documentation, and structured booking flow.">
+  <meta name="twitter:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/images/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/images/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
@@ -34,59 +50,49 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / Voice</p>
       <h1>AI Voice Booking Assistant</h1>
-      <p class="lede">AI-assisted voice booking workflow for Right Outside Auto Detailing LLC — structured stages, prompt control, confirmation checkpoints, and iterative QA with published documentation evidence.</p>
-      <div class="badge-row">
-        <span class="badge">Functional Build</span>
-        <span class="badge">10 stages</span>
-        <span class="badge">Docs published</span>
-      </div>
+      <p class="lede">Structured booking conversation for Right Outside Auto Detailing LLC — quoting, information collection, appointment handling, and failure recovery through iterative QA.</p>
+      <div class="badge-row"><span class="badge">Functional Build</span><span class="badge">10 stages</span><span class="badge">Docs published</span></div>
+      <ul class="tech-tags"><li>Prompt engineering</li><li>Conversational QA</li><li>Business rules</li><li>Twilio (documented scope)</li></ul>
     </div>
     <section class="section" style="padding-top:0"><div class="wrap">
-      <div class="prose"><h2>Measurable accomplishments</h2><p>Documented design scope — qualitative QA only; no call-volume or conversion metrics claimed.</p></div>
       <div class="metrics-grid">
-        <div class="metric"><div class="metric-value">10</div><div class="metric-label">Booking conversation stages</div></div>
-        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Documentation screenshots published</div></div>
-        <div class="metric"><div class="metric-value">5+</div><div class="metric-label">Failure classes addressed in QA notes</div></div>
-        <div class="metric"><div class="metric-value">1</div><div class="metric-label">Business process redesigned end-to-end</div></div>
+        <div class="metric"><div class="metric-value">10</div><div class="metric-label">Booking stages</div></div>
+        <div class="metric"><div class="metric-value">6</div><div class="metric-label">Doc screenshots published</div></div>
+        <div class="metric"><div class="metric-value">5+</div><div class="metric-label">Failure classes addressed</div></div>
+        <div class="metric"><div class="metric-value">QA</div><div class="metric-label">Retest loop documented</div></div>
       </div>
-      <div class="prose">
-        <h2>Business problem</h2>
-        <p>Missed or unstructured booking conversations create incomplete details, pricing confusion, and appointments that cannot be confirmed confidently.</p>
-        <h2>Workflow design</h2>
-        <p>Built a structured 10-stage booking flow with one-question-at-a-time behavior, stage control, and confirmation checkpoints. Proprietary prompt text is withheld.</p>
+      <div class="prose case-block">
+        <h2>Problem</h2>
+        <p>Missed or unstructured calls created incomplete customer data, unclear service requests, pricing confusion, and unreliable appointment confirmation.</p>
+        <h2>Solution</h2>
+        <p>Designed a 10-stage booking flow with one-question-at-a-time behavior, pricing confirmation checkpoints, address/ZIP collection, appointment options, and a professional close.</p>
+        <h2>My role</h2>
+        <p>Owned conversation logic, prompt strategy, business rules, testing, root-cause fixes, and documentation for the service business.</p>
+        <h2>Tools used</h2>
+        <p>ChatGPT for prompt design; documented n8n/Airtable/Twilio in project scope; structured QA notes.</p>
+        <h2>Challenges</h2>
+        <p>Loops, repeated questions, incorrect booking order, pricing confirmation gaps, and address handling failures during tests.</p>
+        <h2>What I improved</h2>
+        <p>Stage control, confirmation checkpoints, clearer failure classification, and a define → test → fix → retest documentation habit.</p>
+        <h2>Verified outcome</h2>
+        <p>Documented 10-stage Functional Build with published sanitized documentation screenshots. Qualitative reduction of recurring failure patterns in testing notes — no call-volume or conversion metrics claimed.</p>
+        <h2>Workflow diagram</h2>
+        <p class="diagram-note">Architecture diagram of the booking stages — not a live telephony UI screenshot.</p>
       </div>
       <div class="diagram-frame">
-        <img src="/assets/diagrams/voice-booking-flow.svg" alt="Ten-stage voice booking flow diagram" width="1000" height="280" loading="lazy">
-        <p class="diagram-caption">Design-level stages — not a production call transcript.</p>
+        <img src="/assets/diagrams/voice-booking-flow.svg" alt="Architecture diagram of ten-stage voice booking flow" width="1000" height="280" loading="lazy">
+        <p class="diagram-caption">Architecture diagram — proprietary prompt text withheld.</p>
       </div>
-      <div class="prose">
-        <h2>Ten stages</h2>
-        <ol>
-          <li>Greeting</li><li>Service qualification</li><li>Vehicle identification</li><li>Pricing</li>
-          <li>Pricing confirmation</li><li>Customer name</li><li>Address / ZIP</li>
-          <li>Appointment options</li><li>Confirmation</li><li>Professional close</li>
-        </ol>
-        <h2>Prompt engineering &amp; QA</h2>
-        <p>Refined prompts after observed failures: loops, repeated questions, incorrect booking order, address handling issues, and pricing confirmation gaps. Method: define expected behavior → test → classify → root cause → fix → retest → document.</p>
-        <h2>Documentation evidence</h2>
+      <div class="prose"><h2>Sanitized documentation evidence</h2></div>
+      <div class="gallery docs">
+        <figure><img src="/assets/images/evidence/VA-01-Booking-Flow-Documentation.png" alt="Sanitized booking flow documentation screenshot" width="400" height="480" loading="lazy"><figcaption>Booking flow docs</figcaption></figure>
+        <figure><img src="/assets/images/evidence/VA-02-Case-Study-Documentation.png" alt="Sanitized business problem documentation" width="400" height="480" loading="lazy"><figcaption>Business problem docs</figcaption></figure>
+        <figure><img src="/assets/images/voice/VA-03-Overview-Documentation.png" alt="Sanitized overview documentation" width="400" height="480" loading="lazy"><figcaption>Overview</figcaption></figure>
+        <figure><img src="/assets/images/voice/VA-04-Improvements-Documentation.png" alt="Sanitized improvements documentation" width="400" height="480" loading="lazy"><figcaption>Improvements</figcaption></figure>
+        <figure><img src="/assets/images/voice/VA-05-Testing-Documentation.png" alt="Sanitized testing documentation" width="400" height="480" loading="lazy"><figcaption>Testing</figcaption></figure>
+        <figure><img src="/assets/images/voice/VA-06-Workflow-Documentation.png" alt="Sanitized workflow documentation" width="400" height="480" loading="lazy"><figcaption>Workflow docs</figcaption></figure>
       </div>
-      <div class="gallery">
-        <figure><img src="/assets/images/evidence/VA-01-Booking-Flow-Documentation.png" alt="Booking flow documentation" width="400" height="480" loading="lazy"><figcaption>VA-01 — Booking flow</figcaption></figure>
-        <figure><img src="/assets/images/evidence/VA-02-Case-Study-Documentation.png" alt="Business problem documentation" width="400" height="480" loading="lazy"><figcaption>VA-02 — Business problem</figcaption></figure>
-        <figure><img src="/assets/images/voice/VA-03-Overview-Documentation.png" alt="Voice assistant overview documentation" width="400" height="480" loading="lazy"><figcaption>VA-03 — Overview</figcaption></figure>
-        <figure><img src="/assets/images/voice/VA-04-Improvements-Documentation.png" alt="Improvements documentation" width="400" height="480" loading="lazy"><figcaption>VA-04 — Improvements</figcaption></figure>
-        <figure><img src="/assets/images/voice/VA-05-Testing-Documentation.png" alt="Testing documentation" width="400" height="480" loading="lazy"><figcaption>VA-05 — Testing</figcaption></figure>
-        <figure><img src="/assets/images/voice/VA-06-Workflow-Documentation.png" alt="Workflow documentation" width="400" height="480" loading="lazy"><figcaption>VA-06 — Workflow</figcaption></figure>
-      </div>
-      <div class="prose">
-        <h2>Role fit</h2>
-        <ul>
-          <li>Prompt Engineering — stage control and confirmation checkpoints</li>
-          <li>Technical Support — failure classification and retest discipline</li>
-          <li>AI Operations — process documentation for operators</li>
-        </ul>
-        <p><a href="/projects/">← All projects</a> · <a href="/projects/qa.html">QA methodology</a></p>
-      </div>
+      <div class="prose"><p><a href="/projects/">← All projects</a> · <a href="/projects/qa.html">QA methodology</a></p></div>
     </div></section>
   </main>
 
@@ -96,9 +102,10 @@
         <a href="mailto:AlignedVibesCo@gmail.com">AlignedVibesCo@gmail.com</a>
         <a href="tel:+19129016378">(912) 901-6378</a>
         <a href="https://www.linkedin.com/in/leroy-garvin-49443b423/" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+        <a href="/contact.html">Contact</a>
         <a href="/legal.html">Legal</a>
       </div>
-      <p class="footer-copy">© 2026 Leroy Garvin Jr</p>
+      <p class="footer-copy">© 2026 Leroy Garvin Jr · AI Operations portfolio</p>
     </div>
   </footer>
   <script src="/assets/js/main.js" defer></script>

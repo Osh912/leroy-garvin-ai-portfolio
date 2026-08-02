@@ -4,7 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Airtable Systems — Leroy Garvin Jr</title>
-  <meta name="description" content="Airtable queue systems for AI automation: 5 documented tables, schema evidence, QA note patterns.">
+  <meta name="description" content="Airtable queue systems for AI automation: 5 documented tables, status tracking, and QA note patterns.">
+  <link rel="canonical" href="https://leroy-garvin-ai-portfolio.vercel.app/projects/airtable.html">
+  <meta name="author" content="Leroy Garvin Jr">
+  <meta name="theme-color" content="#1c2420">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Leroy Garvin Jr — AI Operations">
+  <meta property="og:title" content="Airtable Systems — Leroy Garvin Jr">
+  <meta property="og:description" content="Airtable queue systems for AI automation: 5 documented tables, status tracking, and QA note patterns.">
+  <meta property="og:url" content="https://leroy-garvin-ai-portfolio.vercel.app/projects/airtable.html">
+  <meta property="og:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Airtable Systems — Leroy Garvin Jr">
+  <meta name="twitter:description" content="Airtable queue systems for AI automation: 5 documented tables, status tracking, and QA note patterns.">
+  <meta name="twitter:image" content="https://leroy-garvin-ai-portfolio.vercel.app/assets/images/og-cover.png">
+  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/images/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/images/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap">
@@ -34,44 +50,43 @@
     <div class="wrap page-hero">
       <p class="section-label"><a href="/projects/">Projects</a> / Airtable</p>
       <h1>Airtable Systems</h1>
-      <p class="lede">Queue and status backbone for GH-X automation stages — documented table structure without publishing private base IDs or record dumps.</p>
-      <div class="badge-row">
-        <span class="badge">Functional Build</span>
-        <span class="badge">5 tables documented</span>
-      </div>
+      <p class="lede">Queue and status backbone for GH-X: product rows, stage work items, settings, content ops, and dashboard visibility — documented without private IDs.</p>
+      <div class="badge-row"><span class="badge">Functional Build</span><span class="badge">5 tables documented</span></div>
+      <ul class="tech-tags"><li>Airtable</li><li>Queues</li><li>Status fields</li><li>QA notes</li></ul>
     </div>
     <section class="section" style="padding-top:0"><div class="wrap">
-      <div class="prose"><h2>Measurable accomplishments</h2></div>
       <div class="metrics-grid">
-        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Documented GH-X tables</div></div>
-        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Pipeline stages supported</div></div>
-        <div class="metric"><div class="metric-value">1</div><div class="metric-label">Queue-first ops model</div></div>
-        <div class="metric"><div class="metric-value">QA</div><div class="metric-label">Issue-note loop supported</div></div>
+        <div class="metric"><div class="metric-value">5</div><div class="metric-label">Documented tables</div></div>
+        <div class="metric"><div class="metric-value">8</div><div class="metric-label">Stages supported</div></div>
+        <div class="metric"><div class="metric-value">QA</div><div class="metric-label">Issue-note loop</div></div>
+        <div class="metric"><div class="metric-value">Ops</div><div class="metric-label">Status visibility</div></div>
+      </div>
+      <div class="prose case-block">
+        <h2>Problem</h2>
+        <p>Automation stages need a shared source of truth for what is queued, in progress, blocked, or ready to publish.</p>
+        <h2>Solution</h2>
+        <p>Designed Airtable structures for Products, ContentQueue, Settings, Content Engine, and GHX Dashboard so n8n can read/write status and capture QA notes.</p>
+        <h2>My role</h2>
+        <p>Field/status planning and operational documentation for the automation backbone.</p>
+        <h2>Tools used</h2>
+        <p>Airtable + n8n Airtable nodes across GH-X definitions.</p>
+        <h2>Challenges</h2>
+        <p>Publishing useful schema evidence without leaking base IDs, share links, or record dumps.</p>
+        <h2>What I improved</h2>
+        <p>Clearer queue/status language and QA note patterns for classify → fix → retest loops.</p>
+        <h2>Verified outcome</h2>
+        <p>Five tables documented publicly via architecture diagrams. Live UI screenshots with identifiable data are withheld until sanitized captures exist.</p>
+        <p class="diagram-note">Architecture diagrams — not live Airtable UI screenshots.</p>
       </div>
       <div class="diagram-frame">
-        <img src="/assets/diagrams/airtable-queue.svg" alt="Airtable queue connected to n8n stages" width="720" height="320" loading="lazy">
-        <p class="diagram-caption">Queue tables feed n8n stages; status and QA notes close the loop.</p>
+        <img src="/assets/diagrams/airtable-queue.svg" alt="Architecture diagram of Airtable queues feeding n8n stages and QA notes" width="720" height="320" loading="lazy">
+        <p class="diagram-caption">Queue / stage / QA loop architecture diagram.</p>
       </div>
-      <div class="diagram-frame" style="margin-top:1rem">
-        <img src="/assets/diagrams/airtable-schema.svg" alt="Documented Airtable schema with five tables" width="960" height="420" loading="lazy">
-        <p class="diagram-caption">Schema evidence from public Airtable table documentation — IDs withheld.</p>
+      <div class="diagram-frame">
+        <img src="/assets/diagrams/airtable-schema.svg" alt="Architecture diagram of five documented GH-X Airtable tables" width="960" height="420" loading="lazy">
+        <p class="diagram-caption">Documented schema overview — IDs withheld.</p>
       </div>
-      <div class="prose">
-        <h2>Documented tables</h2>
-        <ul>
-          <li><strong>Products</strong> — product / SKU status</li>
-          <li><strong>ContentQueue</strong> — stage work items</li>
-          <li><strong>Settings</strong> — configuration</li>
-          <li><strong>Content Engine</strong> — content operations</li>
-          <li><strong>GHX Dashboard</strong> — operational overview</li>
-        </ul>
-        <h2>What is withheld</h2>
-        <ul>
-          <li>Private base IDs, share links, and record dumps</li>
-          <li>Credentials and automation tokens</li>
-        </ul>
-        <p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/n8n.html">n8n</a></p>
-      </div>
+      <div class="prose"><p><a href="/projects/">← All projects</a> · <a href="/projects/ghx.html">GH-X</a> · <a href="/projects/n8n.html">n8n</a></p></div>
     </div></section>
   </main>
 
@@ -81,9 +96,10 @@
         <a href="mailto:AlignedVibesCo@gmail.com">AlignedVibesCo@gmail.com</a>
         <a href="tel:+19129016378">(912) 901-6378</a>
         <a href="https://www.linkedin.com/in/leroy-garvin-49443b423/" rel="noopener noreferrer" target="_blank">LinkedIn</a>
+        <a href="/contact.html">Contact</a>
         <a href="/legal.html">Legal</a>
       </div>
-      <p class="footer-copy">© 2026 Leroy Garvin Jr</p>
+      <p class="footer-copy">© 2026 Leroy Garvin Jr · AI Operations portfolio</p>
     </div>
   </footer>
   <script src="/assets/js/main.js" defer></script>
