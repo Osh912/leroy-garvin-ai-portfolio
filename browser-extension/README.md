@@ -21,13 +21,15 @@ browser-extension/
    ```
 2. Chrome → `chrome://extensions` → enable **Developer mode**
 3. **Load unpacked** → select this `browser-extension/` folder
-4. In Job Machine: **Prepare Application** → **Open Application**
-5. On the application page, review the Safe Autofill preview → **Confirm Autofill**
-6. Complete sensitive/custom questions yourself → submit yourself
-7. Click **Mark as Submitted** (extension panel or Job Machine)
+4. In Job Machine: **Prepare Application** → review resume/cover → **Approve to Apply** → **Open Official Application**
+5. Extension: **Preview Autofill** → **Confirm Autofill**
+6. Complete MANUAL REVIEW REQUIRED fields + attach labeled resume/cover files
+7. Click **READY FOR FINAL REVIEW** (never submits)
+8. **You** click the employer Submit button
+9. Confirm: **Yes — Mark Applied** / No / Unsure
 
-Fixture pages for local adapter checks:  
-`http://127.0.0.1:8787/fixtures/greenhouse.html` (and lever, ashby, smartrecruiters, workday, indeed, linkedin, generic)
+Fixture pages:  
+`http://127.0.0.1:8787/fixtures/greenhouse.html` (also lever, ashby, smartrecruiters, workday, workable, indeed, linkedin, generic)
 
 ## C. Platforms supported
 
@@ -38,8 +40,9 @@ Fixture pages for local adapter checks:
 | Ashby | `adapters/ashby.js` |
 | SmartRecruiters | `adapters/smartrecruiters.js` |
 | Workday | `adapters/workday.js` |
-| Indeed company pages | `adapters/indeed.js` |
-| LinkedIn external/apply forms | `adapters/linkedin.js` |
+| Workable | `adapters/workable.js` |
+| Indeed company pages (manual-leaning) | `adapters/indeed.js` |
+| LinkedIn Easy Apply (manual) | `adapters/linkedin.js` |
 | Generic career forms | `adapters/generic.js` |
 
 ## D. Permissions requested

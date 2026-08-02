@@ -27,6 +27,7 @@ AUTOFILL_LOG_PATH = ROOT / "data" / "autofill_activity.log"
 # Standard fields that may be filled after Confirm Autofill
 SAFE_AUTOFILL_KEYS = [
     "first_name",
+    "middle_name",
     "last_name",
     "email",
     "phone",
@@ -38,9 +39,11 @@ SAFE_AUTOFILL_KEYS = [
     "portfolio",
     "github",
     "current_job_title",
+    "employment_history",
+    "skills",
 ]
 
-# Never auto-answer these categories
+# Never auto-answer these categories — MANUAL REVIEW REQUIRED
 SENSITIVE_QUESTION_PATTERNS = [
     r"\bdisability\b",
     r"\bdisabled\b",
@@ -65,16 +68,31 @@ SENSITIVE_QUESTION_PATTERNS = [
     r"\brequire sponsorship\b",
     r"\bsalary\b",
     r"\bcompensation\b",
-    r"\bdesired pay\b",
+    r"\bdesired (pay|comp|salary)",
     r"\bexpected (pay|salary|comp)",
     r"\beeo\b",
     r"\bequal opportunity\b",
     r"\bvoluntary self",
     r"\bprotected veteran\b",
     r"\bdemograph",
+    r"\bstart date\b",
+    r"\bwhen can you start\b",
+    r"\bearliest start\b",
+    r"\brelocat",
+    r"\bwilling to move\b",
+    r"\bi agree\b",
+    r"\bterms (and|&) conditions\b",
+    r"\bprivacy policy\b",
+    r"\blegal agreement\b",
+    r"\bconsent\b",
+    r"\beducation\b",
+    r"\bdegree\b",
+    r"\buniversity\b",
+    r"\bcertification\b",
+    r"\bgpa\b",
 ]
 
-# Draftable custom questions (still require Leroy approval)
+# Draftable custom questions (still require Leroy approval before insert)
 DRAFTABLE_PATTERNS = [
     (r"why (are you )?interested", "interest"),
     (r"why (this|our) (role|position|job|company|team)", "interest"),
@@ -82,12 +100,12 @@ DRAFTABLE_PATTERNS = [
     (r"relevant experience", "experience"),
     (r"tell us about (yourself|your experience)", "experience"),
     (r"describe .+ experience", "experience"),
+    (r"difficult (problem|challenge)|challenging (problem|situation)|problem you solved", "problem"),
+    (r"what tools|tools have you|which tools|technologies (have you|do you)", "tools"),
+    (r"why should we hire|why hire you|why are you a (good|great) fit", "hire"),
     (r"cover letter", "cover"),
     (r"additional information", "additional"),
     (r"anything else", "additional"),
-    (r"start date", "start_date"),
-    (r"when can you start", "start_date"),
-    (r"earliest start", "start_date"),
 ]
 
 PLATFORM_HOST_RULES: list[tuple[str, list[str]]] = [
@@ -96,6 +114,7 @@ PLATFORM_HOST_RULES: list[tuple[str, list[str]]] = [
     ("ashby", ["ashbyhq.com", "jobs.ashbyhq.com"]),
     ("smartrecruiters", ["smartrecruiters.com", "jobs.smartrecruiters.com"]),
     ("workday", ["myworkdayjobs.com", "workday.com"]),
+    ("workable", ["workable.com", "apply.workable.com"]),
     ("indeed", ["indeed.com"]),
     ("linkedin", ["linkedin.com"]),
 ]
@@ -147,8 +166,17 @@ def draftable_kind(text: str) -> str | None:
 def verified_autofill_fields() -> dict[str, Any]:
     """Only return verified profile values. Null/empty means do not fill."""
     c = _candidate()
+    profile = load_profile()
+    skills = profile.get("skills") or []
+    employment_bits = []
+    if c.get("current_title") and c.get("current_employer"):
+        employment_bits.append(f"{c['current_title']} — {c['current_employer']}")
+    elif c.get("current_title"):
+        employment_bits.append(str(c["current_title"]))
+    # Never invent street address; middle_name only when explicitly verified in profile
     fields = {
         "first_name": c.get("first_name") or (c.get("full_name") or "").split(" ")[0],
+        "middle_name": c.get("middle_name"),  # null unless verified
         "last_name": c.get("last_name")
         or " ".join((c.get("full_name") or "").split(" ")[1:])
         or None,
@@ -162,6 +190,8 @@ def verified_autofill_fields() -> dict[str, Any]:
         "portfolio": c.get("portfolio") or PORTFOLIO_URL,
         "github": c.get("github"),  # only if present in profile
         "current_job_title": c.get("current_title"),
+        "employment_history": "; ".join(employment_bits) if employment_bits else None,
+        "skills": ", ".join(skills[:20]) if skills else None,
     }
     # Strip empties / explicit nulls for fill list; keep keys for preview transparency
     return {k: (v if v not in ("", None) else None) for k, v in fields.items()}
@@ -313,8 +343,12 @@ def build_autofill_payload(row: Application, db: Session) -> dict[str, Any]:
     manual_only = [k for k in SAFE_AUTOFILL_KEYS if not fields.get(k)]
     meta = _meta(row)
 
+    resume_name = Path(
+        files.get("resume_pdf") or files.get("resume_txt") or files.get("resume_md") or ""
+    ).name
+    cover_name = Path(files.get("cover_pdf") or files.get("cover_txt") or files.get("cover_md") or "").name
     return {
-        "mode": "safe_autofill",
+        "mode": "review_and_submit",
         "auto_submit": False,
         "requires_confirm_autofill": True,
         "captcha_bypass": False,
@@ -326,11 +360,14 @@ def build_autofill_payload(row: Application, db: Session) -> dict[str, Any]:
         "position": row.position,
         "application_url": url,
         "platform": platform,
+        "platform_manual_only": platform in {"linkedin", "indeed"},
         "fields": fields,
         "fillable_fields": fillable,
         "manual_or_missing_fields": manual_only,
         "files": files,
+        "file_filenames": {"resume": resume_name, "cover": cover_name},
         "safety_check": check,
+        "match_score": row.application_score,
         "sensitive_policy": {
             "never_auto_answer": [
                 "disability",
@@ -339,8 +376,12 @@ def build_autofill_payload(row: Application, db: Session) -> dict[str, Any]:
                 "sponsorship / work authorization",
                 "criminal history",
                 "salary / compensation",
+                "start date / relocate",
+                "legal agreements / consent",
+                "unverified education or certification",
                 "custom screening without review",
             ],
+            "manual_review_label": "MANUAL REVIEW REQUIRED",
             "draft_requires_approval": True,
         },
         "resume_version": files.get("resume_version"),
@@ -415,15 +456,17 @@ def suggest_answer(app_id: int, question: str, db: Session) -> dict[str, Any]:
             "question": q,
             "sensitive": True,
             "suggested_answer": None,
-            "label": "Manual selection required",
+            "label": "MANUAL REVIEW REQUIRED",
             "source_facts": [],
             "requires_review": True,
             "auto_fill": False,
-            "note": "Sensitive / self-identification / legal / salary / sponsorship questions are never auto-answered.",
+            "note": "Sensitive / self-identification / legal / salary / sponsorship / start date / relocate questions are never auto-answered.",
         }
 
     kind = draftable_kind(q)
     c = _candidate()
+    profile = load_profile()
+    tools = profile.get("tools") or []
     projects = json.loads(row.portfolio_refs or "[]")
     project_names = [p.get("name") for p in projects if p.get("name")]
     source_facts = [
@@ -434,6 +477,8 @@ def suggest_answer(app_id: int, question: str, db: Session) -> dict[str, Any]:
     ]
     if project_names:
         source_facts.append("Matched projects: " + ", ".join(project_names[:4]))
+    if tools:
+        source_facts.append("Verified tools: " + ", ".join(tools[:8]))
 
     draft = None
     if kind == "interest":
@@ -449,6 +494,24 @@ def suggest_answer(app_id: int, question: str, db: Session) -> dict[str, Any]:
             f"(tools such as n8n, Airtable, and LLM assistants). For {row.company}, I can apply the same approach to "
             f"reliable support and automation operations. Evidence: {', '.join(project_names[:3]) or (c.get('portfolio') or PORTFOLIO_URL)}."
         )
+    elif kind == "problem":
+        draft = (
+            f"A recent difficult problem was designing reliable AI/workflow automations with clear failure handling "
+            f"and human review points. I used tools such as {', '.join(tools[:4]) or 'n8n and LLM assistants'} and "
+            f"documented the process so results stay truthful and repeatable. Portfolio: "
+            f"{c.get('portfolio') or PORTFOLIO_URL}."
+        )
+    elif kind == "tools":
+        draft = (
+            f"Verified tools I use: {', '.join(tools[:10]) or 'ChatGPT, Claude, n8n, Airtable, Cursor'}. "
+            f"I apply them for AI operations, workflow automation, and practical support workflows."
+        )
+    elif kind == "hire":
+        draft = (
+            f"You should hire me for {row.position} because I combine {c.get('positioning')} with hands-on "
+            f"operations experience as {c.get('current_title')}. I ship practical automation systems and can "
+            f"point to portfolio evidence ({', '.join(project_names[:3]) or (c.get('portfolio') or PORTFOLIO_URL)})."
+        )
     elif kind == "cover":
         draft = (row.cover_letter or "")[:2000] or None
         if draft:
@@ -458,24 +521,12 @@ def suggest_answer(app_id: int, question: str, db: Session) -> dict[str, Any]:
             f"Additional materials: Portfolio {c.get('portfolio') or PORTFOLIO_URL}; "
             f"LinkedIn {c.get('linkedin')}. Happy to share job-specific resume/cover for {row.company}."
         )
-    elif kind == "start_date":
-        draft = None  # leave blank — Leroy must choose; don't invent availability
-        return {
-            "question": q,
-            "sensitive": False,
-            "suggested_answer": None,
-            "label": "Suggested Answer unavailable — choose your own start date",
-            "source_facts": source_facts,
-            "requires_review": True,
-            "auto_fill": False,
-            "note": "Start dates are never invented.",
-        }
     else:
         return {
             "question": q,
             "sensitive": False,
             "suggested_answer": None,
-            "label": "No draft — manual answer required",
+            "label": "MANUAL REVIEW REQUIRED",
             "source_facts": source_facts,
             "requires_review": True,
             "auto_fill": False,
@@ -506,6 +557,10 @@ def mark_submitted(
     notes: str | None = None,
     resume_version: str | None = None,
     cover_version: str | None = None,
+    confirmation_number: str | None = None,
+    follow_up_dates: dict[str, Any] | None = None,
+    match_score: float | None = None,
+    marked_via: str = "safe_autofill",
 ) -> dict[str, Any]:
     row = db.get(Application, app_id)
     if not row:
@@ -516,17 +571,31 @@ def mark_submitted(
     now = datetime.utcnow()
     meta = _meta(row)
     files = ensure_application_files(row, job)
+    default_followups = {
+        "check_3_day": (date.today() + timedelta(days=3)).isoformat(),
+        "followup_7_day": (date.today() + timedelta(days=7)).isoformat(),
+        "final_followup_14_day": (date.today() + timedelta(days=14)).isoformat(),
+        "auto_send": False,
+    }
+    fus = follow_up_dates or default_followups
     submission = {
         "company": row.company,
         "role": row.position,
+        "job_title": row.position,
+        "official_posting_url": url,
         "application_url": url,
         "submitted_at": now.isoformat() + "Z",
+        "submission_date": date.today().isoformat(),
+        "submission_time_utc": now.isoformat() + "Z",
         "resume_version": resume_version or files.get("resume_version"),
         "cover_version": cover_version or files.get("cover_version"),
         "platform": plat,
-        "follow_up_date": (date.today() + timedelta(days=5)).isoformat(),
-        "notes": notes or "Manually submitted by Leroy. Autofill companion did not click Submit.",
-        "marked_via": "safe_autofill",
+        "match_score": match_score if match_score is not None else row.application_score,
+        "follow_up_date": fus.get("followup_7_day") or (date.today() + timedelta(days=7)).isoformat(),
+        "follow_up_dates": fus,
+        "confirmation_number": (confirmation_number or "").strip() or None,
+        "notes": notes or "Manually submitted by Leroy. Companion did not click Submit.",
+        "marked_via": marked_via,
     }
     meta["submission"] = submission
     meta.setdefault("autofill", {})
@@ -535,22 +604,27 @@ def mark_submitted(
 
     row.status = "applied"
     row.date_applied = date.today()
-    row.follow_up_date = date.today() + timedelta(days=5)
-    stamp = f"\n[{now.isoformat()}Z] Marked Submitted via Safe Autofill ({plat}). URL: {url}"
+    row.follow_up_date = date.today() + timedelta(days=7)
+    stamp = f"\n[{now.isoformat()}Z] Marked Applied via {marked_via} ({plat}). URL: {url}"
+    if confirmation_number:
+        stamp += f" Confirmation: {confirmation_number.strip()}"
     row.notes = ((row.notes or "").rstrip() + stamp).strip()
     if job:
         job.status = "applied"
     db.add(row)
     db.commit()
     db.refresh(row)
-    _append_log("marked_submitted", {"application_id": app_id, "platform": plat, "company": row.company})
+    _append_log(
+        "marked_submitted",
+        {"application_id": app_id, "platform": plat, "company": row.company, "status": "applied"},
+    )
     clear_active_session()
     return {
         "application_id": row.id,
         "status": row.status,
         "submission": submission,
         "auto_submit": False,
-        "message": "Recorded as submitted. Follow-up date set (+5 days).",
+        "message": "Recorded as Applied. Follow-up dates suggested (3/7/14). Nothing emailed automatically.",
     }
 
 
@@ -576,7 +650,23 @@ def classify_detected_fields(detected: list[dict[str, Any]]) -> dict[str, Any]:
         label = item.get("label") or item.get("name") or item.get("id") or ""
         key = (item.get("mapped_key") or "").strip()
         if is_sensitive_question(label) or is_sensitive_question(key):
-            sensitive.append({**item, "action": "manual_only", "reason": "sensitive_question"})
+            sensitive.append(
+                {
+                    **item,
+                    "action": "manual_only",
+                    "reason": "sensitive_question",
+                    "label_flag": "MANUAL REVIEW REQUIRED",
+                }
+            )
+            continue
+        if key in {"resume_file", "cover_letter_file"}:
+            manual.append(
+                {
+                    **item,
+                    "action": "file_upload_manual",
+                    "label_flag": "ATTACH LABELED FILE",
+                }
+            )
             continue
         if key in fields and fields.get(key):
             autofill.append(
@@ -589,9 +679,16 @@ def classify_detected_fields(detected: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         kind = draftable_kind(label)
         if kind:
-            draftable.append({**item, "action": "suggested_draft", "draft_kind": kind})
+            draftable.append(
+                {
+                    **item,
+                    "action": "suggested_draft",
+                    "draft_kind": kind,
+                    "label_flag": "Suggested Answer",
+                }
+            )
             continue
-        manual.append({**item, "action": "manual_review"})
+        manual.append({**item, "action": "manual_review", "label_flag": "MANUAL REVIEW REQUIRED"})
 
     return {
         "autofill_candidates": autofill,
@@ -599,4 +696,5 @@ def classify_detected_fields(detected: list[dict[str, Any]]) -> dict[str, Any]:
         "sensitive_manual": sensitive,
         "draftable": draftable,
         "submit_buttons_will_not_be_clicked": True,
+        "auto_submit": False,
     }

@@ -919,10 +919,11 @@ def autofill_active():
 
 @router.post("/autofill/applications/{app_id}/open")
 def autofill_open(app_id: int, db: Session = Depends(get_db)):
-    from app.services.safe_autofill import open_application_session
+    """Opens Review-and-Submit session (confirm required; never auto-submits)."""
+    from app.services.review_submit import open_review_session
 
     try:
-        payload = open_application_session(app_id, db)
+        payload = open_review_session(app_id, db)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return payload
@@ -986,6 +987,9 @@ def autofill_mark_submitted(app_id: int, payload: dict | None = None, db: Sessio
             notes=body.get("notes"),
             resume_version=body.get("resume_version"),
             cover_version=body.get("cover_version"),
+            confirmation_number=body.get("confirmation_number"),
+            match_score=body.get("match_score"),
+            marked_via=body.get("marked_via") or "safe_autofill",
         )
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
@@ -995,6 +999,78 @@ def autofill_mark_submitted(app_id: int, payload: dict | None = None, db: Sessio
 def mark_application_submitted(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
     """Alias used by Job Machine UI after manual submit."""
     return autofill_mark_submitted(app_id, payload, db)
+
+
+# --- Review-and-Submit Assistant (never auto-submits) ---
+
+
+@router.get("/review-submit/applications/{app_id}/panel")
+def review_submit_panel(app_id: int, db: Session = Depends(get_db)):
+    from app.services.review_submit import get_review_panel
+
+    try:
+        return get_review_panel(app_id, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/review-submit/applications/{app_id}/open")
+def review_submit_open(app_id: int, db: Session = Depends(get_db)):
+    from app.services.review_submit import open_review_session
+
+    try:
+        return open_review_session(app_id, db)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/review-submit/applications/{app_id}/autofill-confirmed")
+def review_submit_autofill_confirmed(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+    from app.services.review_submit import record_autofill_confirmed
+
+    try:
+        return record_autofill_confirmed(app_id, db, payload or {})
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/review-submit/applications/{app_id}/ready-for-final-review")
+def review_submit_ready(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+    from app.services.review_submit import ready_for_final_review
+
+    try:
+        return ready_for_final_review(app_id, db, payload or {})
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/review-submit/applications/{app_id}/confirm-submission")
+def review_submit_confirm(app_id: int, payload: dict | None = None, db: Session = Depends(get_db)):
+    from app.services.review_submit import confirm_submission
+
+    body = payload or {}
+    try:
+        return confirm_submission(
+            app_id,
+            db,
+            outcome=body.get("outcome") or "",
+            confirmation_number=body.get("confirmation_number"),
+            notes=body.get("notes"),
+            application_url=body.get("application_url"),
+            platform=body.get("platform"),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/review-submit/applications/{app_id}/duplicate-check")
+def review_submit_duplicate(app_id: int, db: Session = Depends(get_db)):
+    from app.services.review_submit import check_duplicate_application
+
+    try:
+        return check_duplicate_application(db, app_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.get("/autofill/applications/{app_id}/files/{kind}")

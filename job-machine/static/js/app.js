@@ -18,6 +18,9 @@
   const STAGES = [
     "saved",
     "ready",
+    "approved_to_apply",
+    "in_progress",
+    "needs_verification",
     "applied",
     "recruiter_viewed",
     "recruiter_replied",
@@ -29,6 +32,20 @@
     "accepted",
     "rejected",
     "withdrawn",
+  ];
+
+  const APPLY_WORKFLOW = [
+    "Job Card",
+    "Prepare Application",
+    "Review Resume and Cover Letter",
+    "Approve to Apply",
+    "Open Official Application",
+    "Preview Autofill",
+    "Confirm Autofill",
+    "Manual Review",
+    "Leroy Clicks Submit",
+    "Confirm Submission",
+    "Mark Applied",
   ];
 
   const STAGE_ALIASES = {
@@ -188,6 +205,8 @@
       ${app.status === "ready" ? `<span class="package-ready">Apply Package Ready</span>` : ""}
       <div class="card-actions">
         ${app.status === "ready" || app.status === "saved" ? `<button type="button" class="btn primary" data-action="approve" data-id="${app.id}">Approve to Apply</button>` : ""}
+        ${app.status === "approved_to_apply" || app.status === "in_progress" || app.status === "needs_verification" ? `<button type="button" class="btn primary" data-action="open-application" data-id="${app.id}">Open Official Application</button>` : ""}
+        ${app.status === "in_progress" || app.status === "needs_verification" || app.status === "approved_to_apply" ? `<button type="button" class="btn" data-action="confirm-submission" data-id="${app.id}">Confirm Submission</button>` : ""}
         <button type="button" class="btn" data-action="open-assistant" data-id="${app.id}">Assistant</button>
         <button type="button" class="btn" data-action="open-app" data-id="${app.id}">Open Packet</button>
         <button type="button" class="btn" data-action="export-app" data-id="${app.id}">Export</button>
@@ -307,7 +326,8 @@
             ${a.status === "ready" || a.status === "saved" ? `<button type="button" class="btn primary" data-action="approve" data-id="${a.id}">Approve</button>` : ""}
             <button type="button" class="btn" data-action="prepare-app" data-id="${a.job_id}">Prepare</button>
             <button type="button" class="btn" data-action="open-application" data-id="${a.id}">Open App</button>
-            <button type="button" class="btn" data-action="mark-submitted" data-id="${a.id}">Submitted</button>
+            <button type="button" class="btn" data-action="confirm-submission" data-id="${a.id}">Confirm</button>
+            <button type="button" class="btn" data-action="mark-submitted" data-id="${a.id}">Mark Applied</button>
             <button type="button" class="btn" data-action="open-assistant" data-id="${a.id}">Assistant</button>
             <button type="button" class="btn" data-action="prep-app" data-id="${a.job_id}">Prep</button>
             <button type="button" class="btn" data-action="export-app" data-id="${a.id}">Export</button>
@@ -628,17 +648,51 @@
       <pre class="followup-body">${escapeHtml(app.tailored_resume || "Not generated")}</pre>
       <h3 style="margin:1rem 0 0.4rem">Cover letter</h3>
       <pre class="followup-body">${escapeHtml(app.cover_letter || "Not generated")}</pre>
+      <h3 style="margin:1rem 0 0.4rem">Safe apply workflow</h3>
+      <ol class="workflow-steps">${APPLY_WORKFLOW.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
+      <p class="note">Never skip approval steps. Auto-submit stays OFF. You click the employer Submit button.</p>
+      <div id="assistant-review-panel" class="note">Loading submission checklist…</div>
       <div class="card-actions" style="margin-top:0.75rem">
         ${app.job_id ? `<button type="button" class="btn primary" data-action="prepare-app" data-id="${app.job_id}">Prepare Application</button>` : ""}
-        <button type="button" class="btn primary" data-action="open-application" data-id="${app.application_id}">Open Application</button>
-        <button type="button" class="btn" data-action="mark-submitted" data-id="${app.application_id}">Mark as Submitted</button>
-        <button type="button" class="btn" data-action="export-app" data-id="${app.application_id}">Export Packet</button>
         ${
           app.status === "ready" || app.status === "saved"
-            ? `<button type="button" class="btn" data-action="approve" data-id="${app.application_id}">Approve to Apply</button>`
+            ? `<button type="button" class="btn primary" data-action="approve" data-id="${app.application_id}">Approve to Apply</button>`
             : ""
         }
+        <button type="button" class="btn primary" data-action="open-application" data-id="${app.application_id}">Open Official Application</button>
+        <button type="button" class="btn" data-action="ready-final-review" data-id="${app.application_id}">READY FOR FINAL REVIEW</button>
+        <button type="button" class="btn" data-action="confirm-submission" data-id="${app.application_id}">Confirm Submission</button>
+        <button type="button" class="btn" data-action="export-app" data-id="${app.application_id}">Export Packet</button>
       </div>`;
+    loadReviewPanel(app.application_id);
+  }
+
+  async function loadReviewPanel(appId) {
+    const el = $("#assistant-review-panel");
+    if (!el || !appId) return;
+    try {
+      const panel = await api(`/api/review-submit/applications/${appId}/panel`);
+      const steps = (panel.workflow?.steps || [])
+        .map((s) => `<li class="${s.done ? "done" : ""}">${s.done ? "✓" : "○"} ${escapeHtml(s.name)}</li>`)
+        .join("");
+      const checks = (panel.submission_checklist?.labeled || [])
+        .map((c) => `<li>${c.ok ? "✓" : "○"} ${escapeHtml(c.label)}</li>`)
+        .join("");
+      const dup = panel.duplicate_check?.duplicate_warning
+        ? `<p class="warn">${escapeHtml(panel.duplicate_check.message || "Duplicate warning")}</p>`
+        : "";
+      el.innerHTML = `
+        <h3 style="margin:0.5rem 0 0.3rem">Progress</h3>
+        <ol class="workflow-steps">${steps}</ol>
+        ${dup}
+        <h3 style="margin:0.75rem 0 0.3rem">Submission review checklist</h3>
+        <ul class="checklist-mini">${checks || "<li>Prepare application first</li>"}</ul>
+        <p class="note">Files: <code>${escapeHtml(panel.file_filenames?.resume || "—")}</code> ·
+        <code>${escapeHtml(panel.file_filenames?.cover || "—")}</code></p>
+        <p class="note">Next: <strong>${escapeHtml(panel.workflow?.next_step || "—")}</strong> · Auto-submit OFF</p>`;
+    } catch (err) {
+      el.innerHTML = `<p class="note">Review panel unavailable: ${escapeHtml(err.message || err)}</p>`;
+    }
   }
 
   function renderAssistantChecklist(app) {
@@ -1360,10 +1414,15 @@
         switchView("tracker");
       }
       if (action === "approve") {
-        if (!confirm("Approve this application? Marks Applied only — nothing is auto-submitted.")) return;
+        if (
+          !confirm(
+            "Approve to Apply?\n\nThis does NOT mark Applied yet.\nNext: Open Official Application → Confirm Autofill → you click Submit → Confirm Submission."
+          )
+        )
+          return;
         await api(`/api/applications/${id}/approve`, { method: "POST" });
-        await Promise.all([loadDashboard(), loadTracker(), loadPacketsFromReady()]);
-        alert("Marked Applied. Submit the listing yourself.");
+        await Promise.all([loadDashboard(), loadTracker(), loadPacketsFromReady(), loadAssistant().catch(() => null)]);
+        alert("Approved to Apply. Open Official Application next. Applied only after you confirm submission.");
       }
       if (action === "prepare-app") {
         const label = btn.textContent;
@@ -1391,29 +1450,75 @@
         await loadAssistant();
       }
       if (action === "open-application") {
-        const session = await api(`/api/autofill/applications/${id}/open`, { method: "POST" });
+        const session = await api(`/api/review-submit/applications/${id}/open`, { method: "POST" });
         if (!session.application_url) {
           alert("No application URL on this job.");
           return;
         }
+        if (session.duplicate_check?.duplicate_warning) {
+          if (!confirm(`${session.duplicate_check.message}\n\nOpen anyway?`)) return;
+        }
         window.open(session.application_url, "_blank", "noopener,noreferrer");
+        const resumeFn = session.file_filenames?.resume || "resume";
+        const coverFn = session.file_filenames?.cover || "cover";
         alert(
           `Opened ${session.company} — ${session.position}\nPlatform: ${session.platform}\n\n` +
-            "In the browser extension: review the preview, then click Confirm Autofill.\n" +
-            "Submit is NEVER clicked for you. After you submit manually, click Mark as Submitted."
+            `Attach:\n• Resume: ${resumeFn}\n• Cover: ${coverFn}\n\n` +
+            "Extension: Preview Autofill → Confirm Autofill → Manual Review → READY FOR FINAL REVIEW.\n" +
+            "YOU click employer Submit. Then Confirm Submission → Yes — Mark Applied.\n" +
+            "Submit is NEVER clicked for you."
         );
         if (document.getElementById("view-assistant")?.classList.contains("active")) {
           await loadAssistant();
         }
       }
+      if (action === "ready-final-review") {
+        if (
+          !confirm(
+            "READY FOR FINAL REVIEW?\n\nThis never submits the application.\nYou must click the employer Submit button yourself."
+          )
+        )
+          return;
+        const result = await api(`/api/review-submit/applications/${id}/ready-for-final-review`, {
+          method: "POST",
+          body: JSON.stringify({
+            required_questions_completed: true,
+            sensitive_questions_reviewed_manually: true,
+            no_blank_required_fields: true,
+            fully_remote_verified: true,
+          }),
+        });
+        alert(result.message || "Ready for final review — does not submit.");
+        await loadAssistant().catch(() => null);
+      }
+      if (action === "confirm-submission") {
+        const outcome = prompt(
+          "DID THE APPLICATION SUBMIT SUCCESSFULLY?\n\nType: yes | no | unsure\n\nyes = Mark Applied\nno = Keep In Progress\nunsure = Needs Verification",
+          "yes"
+        );
+        if (!outcome) return;
+        const confirmation_number = prompt("Confirmation number (optional):", "") || "";
+        const notes = prompt("Notes (optional):", "Manually submitted by Leroy.") || "";
+        const result = await api(`/api/review-submit/applications/${id}/confirm-submission`, {
+          method: "POST",
+          body: JSON.stringify({
+            outcome: outcome.trim().toLowerCase(),
+            confirmation_number: confirmation_number || null,
+            notes,
+          }),
+        });
+        alert(result.message || `Status: ${result.status}`);
+        await Promise.all([loadDashboard(), loadTracker(), loadAssistant().catch(() => null)]);
+      }
       if (action === "mark-submitted") {
-        if (!confirm("Mark as Submitted only after YOU manually submitted the application?")) return;
+        if (!confirm("Mark Applied only after YOU manually submitted? Prefer Confirm Submission (Yes/No/Unsure)."))
+          return;
         const notes = prompt("Optional submission notes:", "Manually submitted by Leroy.") || "";
         const result = await api(`/api/applications/${id}/mark-submitted`, {
           method: "POST",
           body: JSON.stringify({ notes }),
         });
-        alert(result.message || "Marked submitted.");
+        alert(result.message || "Marked Applied.");
         await Promise.all([loadDashboard(), loadTracker(), loadAssistant().catch(() => null)]);
       }
       if (action === "crm-delete") {

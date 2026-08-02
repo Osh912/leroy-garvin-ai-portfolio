@@ -1,7 +1,8 @@
 (() => {
   const KEY_RULES = [
-    [/first\s*name|fname|given[-_ ]?name/i, "first_name"],
-    [/last\s*name|lname|surname|family[-_ ]?name/i, "last_name"],
+    [/middle\s*name|mname/i, "middle_name"],
+    [/first\s*name|fname|given[-_ ]?name|firstname/i, "first_name"],
+    [/last\s*name|lname|surname|family[-_ ]?name|lastname/i, "last_name"],
     [/^name$|full\s*name|applicant[-_ ]?name/i, "full_name"],
     [/e-?mail/i, "email"],
     [/phone|mobile|tel/i, "phone"],
@@ -10,9 +11,11 @@
     [/state|province|region/i, "state"],
     [/zip|postal|postcode/i, "zip_code"],
     [/linkedin/i, "linkedin"],
-    [/portfolio|website|personal site|url/i, "portfolio"],
     [/github/i, "github"],
-    [/current (job )?title|title|headline/i, "current_job_title"],
+    [/portfolio|website|personal site/i, "portfolio"],
+    [/current (job )?title|headline/i, "current_job_title"],
+    [/employment|work history|experience summary/i, "employment_history"],
+    [/skills|skill set/i, "skills"],
     [/resume|cv/i, "resume_file"],
     [/cover\s*letter/i, "cover_letter_file"],
   ];
@@ -129,9 +132,35 @@
   function highlightManualReview() {
     document.querySelectorAll("input, textarea, select").forEach((el) => {
       const label = labelFor(el);
-      if (window.JMSafety.isSensitiveLabel(label)) el.classList.add("jm-manual-review");
-      if (el.type === "file") el.classList.add("jm-manual-review");
+      if (window.JMSafety.isSensitiveLabel(label)) {
+        window.JMSafety.markManualReviewRequired(el, "sensitive");
+      }
+      if (el.type === "file") {
+        el.classList.add("jm-file-upload");
+        el.classList.add("jm-manual-review");
+      }
       if (el.required && !el.value) el.classList.add("jm-manual-review");
+    });
+  }
+
+  function highlightFileUploads(session) {
+    const resumeName = session?.file_filenames?.resume || "job-specific resume";
+    const coverName = session?.file_filenames?.cover || "job-specific cover letter";
+    document.querySelectorAll("input[type=file]").forEach((el) => {
+      const label = labelFor(el);
+      const key = mapKey(label, el.name, el.id);
+      el.classList.add("jm-file-upload");
+      el.classList.add("jm-manual-review");
+      const parent = el.closest("label") || el.parentElement;
+      if (!parent || parent.querySelector(".jm-file-hint")) return;
+      const hint = document.createElement("div");
+      hint.className = "jm-file-hint";
+      if (key === "cover_letter_file" || /cover/i.test(label + el.name)) {
+        hint.textContent = `Attach cover letter: ${coverName}`;
+      } else {
+        hint.textContent = `Attach resume: ${resumeName}`;
+      }
+      parent.appendChild(hint);
     });
   }
 
@@ -141,6 +170,7 @@
     collectInputs,
     applyFill,
     highlightManualReview,
+    highlightFileUploads,
     setNativeValue,
   };
 })();

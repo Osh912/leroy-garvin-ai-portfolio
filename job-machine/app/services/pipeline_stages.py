@@ -8,6 +8,9 @@ from typing import Any
 PIPELINE_STAGES = [
     "saved",
     "ready",
+    "approved_to_apply",
+    "in_progress",
+    "needs_verification",
     "applied",
     "recruiter_viewed",
     "recruiter_replied",
@@ -31,6 +34,9 @@ STAGE_ALIASES = {
 STAGE_LABELS = {
     "saved": "Saved",
     "ready": "Ready",
+    "approved_to_apply": "Approved to Apply",
+    "in_progress": "In Progress",
+    "needs_verification": "Needs Verification",
     "applied": "Applied",
     "recruiter_viewed": "Recruiter Viewed",
     "recruiter_replied": "Recruiter Replied",

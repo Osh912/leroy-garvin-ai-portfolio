@@ -111,6 +111,7 @@ def test_platform_detection():
     assert detect_platform("https://jobs.ashbyhq.com/x") == "ashby"
     assert detect_platform("https://jobs.smartrecruiters.com/x") == "smartrecruiters"
     assert detect_platform("https://company.wd1.myworkdayjobs.com/en-US/careers") == "workday"
+    assert detect_platform("https://apply.workable.com/x/j/1") == "workable"
     assert detect_platform("https://www.indeed.com/viewjob") == "indeed"
     assert detect_platform("https://www.linkedin.com/jobs/view/1") == "linkedin"
     assert detect_platform("https://careers.example.com/apply") == "generic"
@@ -144,6 +145,7 @@ def test_fixture_field_mapping_and_sensitive_classification():
         "ashby.html",
         "smartrecruiters.html",
         "workday.html",
+        "workable.html",
         "indeed.html",
         "linkedin.html",
         "generic.html",
@@ -226,5 +228,6 @@ def test_never_click_submit_contract_in_extension_safety_js():
         encoding="utf-8"
     )
     assert "Confirm Autofill" in content
-    assert "Mark as Submitted" in content
+    assert "Yes — Mark Applied" in content or "Mark Applied" in content
+    assert "READY FOR FINAL REVIEW" in content
     assert "Submit was NOT clicked" in content or "Submit will NOT" in content

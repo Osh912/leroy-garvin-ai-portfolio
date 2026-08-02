@@ -44,6 +44,31 @@
     });
   }
 
+  async function confirmAutofill(appId, body = {}) {
+    return jmFetch(`/api/review-submit/applications/${appId}/autofill-confirmed`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function readyForFinalReview(appId, body = {}) {
+    return jmFetch(`/api/review-submit/applications/${appId}/ready-for-final-review`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function confirmSubmission(appId, body = {}) {
+    return jmFetch(`/api/review-submit/applications/${appId}/confirm-submission`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function getPanel(appId) {
+    return jmFetch(`/api/review-submit/applications/${appId}/panel`);
+  }
+
   async function logEvent(payload) {
     try {
       await jmFetch("/api/autofill/log", { method: "POST", body: JSON.stringify(payload) });
@@ -63,6 +88,10 @@
     classify,
     suggestAnswer,
     markSubmitted,
+    confirmAutofill,
+    readyForFinalReview,
+    confirmSubmission,
+    getPanel,
     logEvent,
     fileDownloadUrl,
   };

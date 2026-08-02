@@ -539,6 +539,19 @@ dialog::backdrop { background: rgba(28, 36, 32, 0.35); }
 }
 .checklist-item { font-weight: 600; }
 .notes-form { margin-top: 0.5rem; }
+.workflow-steps {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.workflow-steps li.done { color: var(--forest, #2f5d45); }
+.checklist-mini {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+.warn { color: #8a3b2d; font-weight: 650; }
 @media (max-width: 900px) {
   .assistant-layout { grid-template-columns: 1fr; }
 }

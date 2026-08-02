@@ -250,21 +250,32 @@ async def morning_refresh(db: Session, *, prepare_packets: bool = True) -> dict[
 
 
 def approve_application(db: Session, app_id: int) -> Application:
-    """Leroy explicitly approves applying — the only path to 'applied'."""
+    """Leroy approves opening/apply workflow — does NOT mark Applied until Confirm Submission."""
+    import json
+
     row = db.get(Application, app_id)
     if not row:
         raise ValueError("Application not found")
     if row.status == "rejected":
         raise ValueError("Cannot approve a rejected application")
-    row.status = "applied"
-    row.date_applied = date.today()
-    if not row.follow_up_date:
-        row.follow_up_date = date.today() + timedelta(days=5)
-    row.notes = (row.notes or "") + f"\n[{datetime.utcnow().isoformat()}Z] Approved by Leroy — marked Applied. Auto-apply never used."
+    if row.status == "applied":
+        return row
+    row.status = "approved_to_apply"
+    row.notes = (
+        (row.notes or "")
+        + f"\n[{datetime.utcnow().isoformat()}Z] Approved to Apply by Leroy. "
+        "Open Official Application next. Applied only after Confirm Submission. Auto-apply never used."
+    )
     row.updated_at = datetime.utcnow()
-    job = db.get(Job, row.job_id) if row.job_id else None
-    if job:
-        job.status = "applied"
+    try:
+        meta = json.loads(getattr(row, "analytics_json", None) or "{}")
+    except json.JSONDecodeError:
+        meta = {}
+    if not isinstance(meta, dict):
+        meta = {}
+    rs = meta.setdefault("review_submit", {})
+    rs["approved_to_apply_at"] = datetime.utcnow().isoformat() + "Z"
+    row.analytics_json = json.dumps(meta)
     db.commit()
     db.refresh(row)
     return row
