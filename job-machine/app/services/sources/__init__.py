@@ -300,3 +300,57 @@ async def fetch_ashby_board(client: httpx.AsyncClient, board: str) -> list[dict[
             )
         )
     return out
+
+
+async def fetch_workable_company(client: httpx.AsyncClient, company: str) -> list[dict[str, Any]]:
+    """Workable public careers widget API (rate-limit aware)."""
+    r = await client.get(
+        f"https://apply.workable.com/api/v1/widget/accounts/{company}",
+        headers={"User-Agent": "LeroyJobMachine/1.0"},
+    )
+    if r.status_code == 429:
+        raise RuntimeError(f"workable:{company} rate limited")
+    if r.status_code >= 400:
+        return []
+    jobs = r.json().get("jobs", []) if isinstance(r.json(), dict) else []
+    out: list[dict[str, Any]] = []
+    for row in jobs:
+        loc = row.get("location") or {}
+        loc_str = ""
+        if isinstance(loc, dict):
+            loc_str = ", ".join(
+                str(x) for x in [loc.get("city"), loc.get("region"), loc.get("country")] if x
+            )
+        elif isinstance(loc, str):
+            loc_str = loc
+        tele = row.get("telecommuting") or row.get("remote")
+        if tele:
+            loc_str = (loc_str + " Remote").strip()
+        out.append(
+            _base(
+                source=f"workable:{company}",
+                external_id=str(row.get("shortcode") or row.get("id") or ""),
+                company=str(row.get("company") or company),
+                title=str(row.get("title") or ""),
+                url=str(row.get("url") or row.get("shortlink") or ""),
+                location=loc_str or ("Remote" if tele else "Unknown"),
+                description=str(row.get("description") or ""),
+                tags=["workable", "remote"] if tele else ["workable"],
+            )
+        )
+    return out
+
+
+async def fetch_with_retry(coro_factory, *, attempts: int = 2, label: str = "source"):
+    """Retry failed sources once (rate limits / transient errors)."""
+    last_exc: Exception | None = None
+    for i in range(attempts):
+        try:
+            return await coro_factory()
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            if i + 1 < attempts:
+                import asyncio
+
+                await asyncio.sleep(0.6 * (i + 1))
+    raise RuntimeError(f"{label} failed after {attempts} attempts: {last_exc}")

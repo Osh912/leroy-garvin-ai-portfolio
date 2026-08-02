@@ -35,6 +35,9 @@ def upsert_contact(db: Session, payload: dict[str, Any], contact_id: int | None 
         "email",
         "phone",
         "linkedin",
+        "role",
+        "status",
+        "referral_source",
         "notes",
         "referral_opportunities",
     ):
@@ -45,6 +48,8 @@ def upsert_contact(db: Session, payload: dict[str, Any], contact_id: int | None 
         row.last_contact = _parse_date(payload.get("last_contact"))
     if "follow_up_date" in payload:
         row.follow_up_date = _parse_date(payload.get("follow_up_date"))
+    if "application_date" in payload:
+        row.application_date = _parse_date(payload.get("application_date"))
     if "application_id" in payload:
         row.application_id = payload.get("application_id")
 
@@ -90,10 +95,14 @@ def import_from_applications(db: Session) -> dict[str, Any]:
             recruiter_name=name,
             company=a.company,
             email=email,
+            role=a.position,
+            application_date=a.date_applied,
+            status=a.status or "active",
             application_id=a.id,
             notes=f"Imported from application #{a.id} ({a.position}). Auto-email: OFF.",
             last_contact=a.date_applied,
             follow_up_date=a.follow_up_date,
+            referral_source="",
         )
         db.add(row)
         created += 1
@@ -129,6 +138,12 @@ def _out(row: RecruiterContact) -> dict[str, Any]:
         "email": row.email,
         "phone": row.phone,
         "linkedin": row.linkedin,
+        "role": getattr(row, "role", "") or "",
+        "application_date": row.application_date.isoformat()
+        if getattr(row, "application_date", None)
+        else None,
+        "status": getattr(row, "status", None) or "active",
+        "referral_source": getattr(row, "referral_source", "") or "",
         "last_contact": row.last_contact.isoformat() if row.last_contact else None,
         "follow_up_schedule": row.follow_up_date.isoformat() if row.follow_up_date else None,
         "follow_up_date": row.follow_up_date.isoformat() if row.follow_up_date else None,

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 """
-PRODUCTION MODE — Transparent Match Score.
+Career Agent 2.0 — Transparent Match Score v2.
 
-Never invents interview probability percentages.
-Match Score = weighted average of documented components (each 0–100):
-
-  25% Skill match
-  20% Resume match
-  20% Portfolio match
-  15% Required experience fit
-  10% Remote eligibility
+Weights (always explainable; never invents interview odds):
+  35% Skill match
+  25% Interview readiness (signals from JD↔profile fit — NOT a predicted interview %)
+  15% Remote verification
   10% Salary fit
+   5% Career growth signals
+   5% Resume strength
+   5% Portfolio match
+
+interview_probability remains null — never fabricated.
 """
 
 from typing import Any
@@ -31,12 +32,13 @@ from app.services.filters import (
 )
 from app.services.portfolio_matcher import match_portfolio
 
-W_SKILL = 0.25
-W_RESUME = 0.20
-W_PORTFOLIO = 0.20
-W_EXPERIENCE = 0.15
-W_REMOTE = 0.10
+W_SKILL = 0.35
+W_INTERVIEW_READINESS = 0.25
+W_REMOTE = 0.15
 W_SALARY = 0.10
+W_CAREER_GROWTH = 0.05
+W_RESUME = 0.05
+W_PORTFOLIO = 0.05
 
 SKILL_TOOLS = [
     "n8n",
@@ -54,6 +56,7 @@ SKILL_TOOLS = [
     "make.com",
     "llm",
     "chatgpt",
+    "claude",
 ]
 
 
@@ -85,7 +88,6 @@ def _resume_score(job: dict[str, Any], blob: str) -> tuple[float, list[str]]:
     evidence: list[str] = []
     skill_hits = [s for s in skills if s and s in blob]
     tool_hits = [t for t in tools if t and t in blob]
-    # Also check resume text overlap with JD distinctive tokens
     jd_tokens = {w for w in blob.split() if len(w) > 4}
     resume_tokens = set(resume.split())
     overlap = len(jd_tokens & resume_tokens)
@@ -105,7 +107,6 @@ def _portfolio_score(job: dict[str, Any], projects: list[dict[str, Any]] | None 
     if not projects:
         return 20.0, ["No strong portfolio keyword overlap yet"]
     top = projects[0]
-    # match_portfolio returns relevance-ish ordering; score by count + top strength
     score = min(100.0, 40.0 + len(projects) * 15.0)
     evidence = [f"Cite: {p.get('name')} ({p.get('url')})" for p in projects[:4]]
     if top.get("blurb"):
@@ -113,22 +114,55 @@ def _portfolio_score(job: dict[str, Any], projects: list[dict[str, Any]] | None 
     return score, evidence
 
 
-def _experience_score(job: dict[str, Any], blob: str, title: str) -> tuple[float, list[str]]:
+def _interview_readiness_score(job: dict[str, Any], blob: str, title: str) -> tuple[float, list[str]]:
+    """
+    Explainable readiness signals only — NOT a forecast of interview odds.
+    Combines level fit, title priority, and absence of senior/years gates.
+    """
     evidence: list[str] = []
     if requires_five_plus_years(job):
-        return 15.0, ["Hard 5+ years requirement — poor fit for current verified profile"]
-    score = 55.0
+        return 15.0, ["Hard 5+ years requirement — low readiness vs verified profile"]
+    score = 50.0
+    if priority_title_hit(job):
+        score += 25
+        evidence.append("Priority target-role title")
     if any(k in title or k in blob for k in LEVEL_KEYWORDS):
-        score = 90.0
-        evidence.append("Level language fits entry / junior / associate / specialist")
+        score += 15
+        evidence.append("Entry/junior/associate/specialist language present")
     if any(k in title for k in ["senior", "staff", "principal", "director", "lead "]):
         score = min(score, 25.0)
-        evidence.append("Title leans senior — stretch vs verified experience")
+        evidence.append("Senior-leaning title reduces readiness score")
     if "manager" in title and "associate" not in title:
         score = min(score, 20.0)
-        evidence.append("Manager title — outside honest-fit band")
+        evidence.append("Manager title outside honest-fit band")
     if not evidence:
-        evidence.append("No hard senior years gate detected; mid/unspecified level")
+        evidence.append("Neutral level signals — readiness from role/keyword overlap only")
+    evidence.append("This is an explainable readiness component — not a predicted interview probability.")
+    return max(0.0, min(100.0, score)), evidence
+
+
+def _career_growth_score(job: dict[str, Any], blob: str) -> tuple[float, list[str]]:
+    evidence: list[str] = []
+    score = 40.0
+    growth_terms = [
+        "career growth",
+        "learning",
+        "mentorship",
+        "path to",
+        "enablement",
+        "implementation",
+        "ownership",
+        "impact",
+    ]
+    hits = [t for t in growth_terms if t in blob]
+    score += min(40.0, len(hits) * 8.0)
+    if priority_title_hit(job):
+        score += 15
+        evidence.append("Target role family supports long-term AI Ops path")
+    if hits:
+        evidence.append("Growth language in JD: " + ", ".join(hits[:4]))
+    if not evidence:
+        evidence.append("Limited explicit growth language — neutral")
     return max(0.0, min(100.0, score)), evidence
 
 
@@ -165,19 +199,21 @@ def score_job(job: dict[str, Any]) -> tuple[float, dict[str, Any]]:
     projects = match_portfolio(job)
 
     skill, skill_ev = _skill_score(job, blob, title)
-    resume, resume_ev = _resume_score(job, blob)
-    portfolio, port_ev = _portfolio_score(job, projects)
-    experience, exp_ev = _experience_score(job, blob, title)
+    interview_ready, ir_ev = _interview_readiness_score(job, blob, title)
     remote, remote_ev = _remote_score(job)
     salary, sal_ev = _salary_score(job)
+    growth, growth_ev = _career_growth_score(job, blob)
+    resume, resume_ev = _resume_score(job, blob)
+    portfolio, port_ev = _portfolio_score(job, projects)
 
     total = (
         skill * W_SKILL
-        + resume * W_RESUME
-        + portfolio * W_PORTFOLIO
-        + experience * W_EXPERIENCE
+        + interview_ready * W_INTERVIEW_READINESS
         + remote * W_REMOTE
         + salary * W_SALARY
+        + growth * W_CAREER_GROWTH
+        + resume * W_RESUME
+        + portfolio * W_PORTFOLIO
     )
     total = max(1.0, min(100.0, round(total, 1)))
 
@@ -187,32 +223,45 @@ def score_job(job: dict[str, Any]) -> tuple[float, dict[str, Any]]:
         "match_percentage": total,
         "components": {
             "skill_match": {"score": round(skill, 1), "weight": W_SKILL, "evidence": skill_ev},
-            "resume_match": {"score": round(resume, 1), "weight": W_RESUME, "evidence": resume_ev},
-            "portfolio_match": {"score": round(portfolio, 1), "weight": W_PORTFOLIO, "evidence": port_ev},
-            "experience_fit": {"score": round(experience, 1), "weight": W_EXPERIENCE, "evidence": exp_ev},
+            "interview_readiness": {
+                "score": round(interview_ready, 1),
+                "weight": W_INTERVIEW_READINESS,
+                "evidence": ir_ev,
+            },
             "remote_eligibility": {"score": round(remote, 1), "weight": W_REMOTE, "evidence": remote_ev},
             "salary_fit": {"score": round(salary, 1), "weight": W_SALARY, "evidence": sal_ev},
+            "career_growth": {"score": round(growth, 1), "weight": W_CAREER_GROWTH, "evidence": growth_ev},
+            "resume_match": {"score": round(resume, 1), "weight": W_RESUME, "evidence": resume_ev},
+            "portfolio_match": {"score": round(portfolio, 1), "weight": W_PORTFOLIO, "evidence": port_ev},
+            # Legacy alias for UI bars that still look for experience_fit
+            "experience_fit": {
+                "score": round(interview_ready, 1),
+                "weight": W_INTERVIEW_READINESS,
+                "evidence": ir_ev,
+                "alias_of": "interview_readiness",
+            },
         },
-        # Flat keys for older UI paths
         "skill_match": round(skill, 1),
+        "interview_readiness": round(interview_ready, 1),
         "resume_match": round(resume, 1),
         "portfolio_match": round(portfolio, 1),
-        "experience_fit": round(experience, 1),
+        "experience_fit": round(interview_ready, 1),
         "remote_eligibility": round(remote, 1),
         "salary_fit": round(salary, 1),
+        "career_growth": round(growth, 1),
         "weights": {
             "skill_match": W_SKILL,
-            "resume_match": W_RESUME,
-            "portfolio_match": W_PORTFOLIO,
-            "experience_fit": W_EXPERIENCE,
+            "interview_readiness": W_INTERVIEW_READINESS,
             "remote_eligibility": W_REMOTE,
             "salary_fit": W_SALARY,
+            "career_growth": W_CAREER_GROWTH,
+            "resume_match": W_RESUME,
+            "portfolio_match": W_PORTFOLIO,
         },
         "estimated_salary_mid": mid,
         "total": total,
-        # Explicitly not an interview probability forecast
         "interview_probability": None,
-        "scoring_mode": "transparent_match_score_v1",
-        "note": "Match Score is a transparent weighted fit score — not a predicted interview rate.",
+        "scoring_mode": "transparent_match_score_v2",
+        "note": "Match Score v2 is a transparent weighted fit score. interview_readiness is NOT a predicted interview rate.",
     }
     return total, breakdown

@@ -68,21 +68,37 @@
           <p>Daily Brief · Coach · Recruiter CRM · Interview Intelligence · Runs 8:00 AM · Never auto-submits or emails</p>
         </div>
         <div class="actions">
-          <button type="button" class="btn primary" id="btn-career-run">Run Morning Agent</button>
+          <button type="button" class="btn primary" id="btn-career-run-now">RUN NOW</button>
+          <button type="button" class="btn" id="btn-career-run">Run Morning Agent</button>
           <button type="button" class="btn" id="btn-career-brief">Refresh Brief</button>
           <button type="button" class="btn" id="btn-career-weekly">Weekly Report</button>
         </div>
       </div>
-      <p class="note" id="career-meta">Local agent · Notify ≥ 80% Match Score · Approval required for apply/outreach</p>
+      <p class="note" id="career-meta">Agent 2.0 · RUN NOW anytime · Alerts ≥90% · Notify ≥80% · Never auto-submits / emails</p>
       <div class="assistant-subnav" role="tablist" aria-label="Career agent sections">
-        <button type="button" class="chip active" data-career-panel="brief">Daily Brief</button>
+        <button type="button" class="chip active" data-career-panel="today">Today's Brief</button>
+        <button type="button" class="chip" data-career-panel="brief">Daily Brief</button>
         <button type="button" class="chip" data-career-panel="coach">Career Coach</button>
         <button type="button" class="chip" data-career-panel="crm">Recruiter CRM</button>
         <button type="button" class="chip" data-career-panel="intel">Interview Intelligence</button>
       </div>
 
-      <div id="career-panel-brief" class="assistant-panel active">
+      <div id="career-panel-today" class="assistant-panel active">
+        <div class="stat-grid dense" id="career-today-stats"></div>
+        <div class="split analytics-split">
+          <div>
+            <h2>Top 10 opportunities</h2>
+            <div id="career-today-top10" class="card-list"></div>
+          </div>
+          <div>
+            <h2>Trends</h2>
+            <div id="career-today-trends" class="metric-panel"></div>
+          </div>
+        </div>
         <div id="career-notifications" class="card-list"></div>
+      </div>
+
+      <div id="career-panel-brief" class="assistant-panel">
         <div class="stat-grid dense" id="career-brief-stats"></div>
         <div class="split analytics-split">
           <div>
@@ -109,9 +125,13 @@
         <form id="crm-form" class="import-form notes-form">
           <label>Recruiter <input name="recruiter_name" required></label>
           <label>Company <input name="company" required></label>
+          <label>Role <input name="role"></label>
           <label>Email <input name="email" type="email"></label>
           <label>Phone <input name="phone"></label>
           <label>LinkedIn <input name="linkedin" type="url"></label>
+          <label>Application date <input name="application_date" type="date"></label>
+          <label>Status <input name="status" placeholder="active / replied / ..."></label>
+          <label>Referral source <input name="referral_source"></label>
           <label>Last contact <input name="last_contact" type="date"></label>
           <label>Follow-up <input name="follow_up_date" type="date"></label>
           <label class="full">Notes <textarea name="notes" rows="2"></textarea></label>

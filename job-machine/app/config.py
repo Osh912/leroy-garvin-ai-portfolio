@@ -23,10 +23,14 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     greenhouse_boards: str = (
         "openai,anthropic,gitlab,automattic,zapier,stripe,datadog,airtable,"
-        "hubspot,canonical,elastic,cloudflare,mozilla,docker"
+        "hubspot,canonical,elastic,cloudflare,mozilla,docker,gusto,"
+        "cloudinary,hashicorp,figma,notion,discord"
     )
-    lever_companies: str = "netflix,shopify,figma,canonical"
-    ashby_boards: str = "openai"
+    lever_companies: str = (
+        "netflix,shopify,figma,canonical,twitch,spotify,reddit,duolingo"
+    )
+    ashby_boards: str = "openai,anthropic,ramp,notion"
+    workable_companies: str = "qase,customer-io,tekion"
     database_url: str = f"sqlite:///{ROOT / 'data' / 'job_machine.db'}"
     host: str = "127.0.0.1"
     port: int = 8787
@@ -42,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def ashby_board_list(self) -> list[str]:
         return [x.strip() for x in self.ashby_boards.split(",") if x.strip()]
+
+    @property
+    def workable_company_list(self) -> list[str]:
+        return [x.strip() for x in self.workable_companies.split(",") if x.strip()]
 
 
 @lru_cache

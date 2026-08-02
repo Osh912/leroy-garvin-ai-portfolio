@@ -111,11 +111,13 @@
     const comps = job.score_breakdown?.components || {};
     const keys = [
       ["skill_match", "Skill"],
-      ["resume_match", "Resume"],
-      ["portfolio_match", "Portfolio"],
-      ["experience_fit", "Experience"],
+      ["interview_readiness", "Readiness"],
+      ["experience_fit", "Readiness"],
       ["remote_eligibility", "Remote"],
       ["salary_fit", "Salary"],
+      ["career_growth", "Growth"],
+      ["resume_match", "Resume"],
+      ["portfolio_match", "Portfolio"],
     ];
     return keys
       .map(([k, label]) => {
@@ -917,11 +919,53 @@
   async function loadCareerAgent() {
     const status = await api("/api/career-agent/status");
     const brief = await api("/api/career-agent/daily-brief");
+    const today = await api("/api/career-agent/todays-brief");
     const coach = await api("/api/career-agent/coach");
     const weekly = await api("/api/career-agent/coach/weekly-report");
     const crm = await api("/api/career-agent/crm");
     $("#career-meta").textContent =
-      `Last run: ${status.last_run?.ran_at || "not yet"} · Auto-apply: off · Auto-email: off · Notify ≥ ${status.notify_threshold}%`;
+      `Last run: ${status.last_run?.ran_at || "not yet"} · Trigger: ${status.last_run?.trigger || "—"} · RUN NOW available · Auto-apply: off · Alerts ≥${status.alert_threshold || 90}%`;
+
+    $("#career-today-stats").innerHTML = [
+      ["Jobs searched", today.jobs_searched_today ?? "—"],
+      ["Verified remote", today.verified_remote_jobs ?? 0],
+      ["New today", today.new_jobs_today ?? 0],
+      ["Apps ready", today.applications_ready ?? 0],
+      ["Apps sent", today.applications_sent ?? 0],
+      ["Recruiter replies", today.recruiter_replies ?? 0],
+      ["Interviews", today.interviews_scheduled ?? 0],
+      ["Offers", today.offers ?? 0],
+      ["Avg salary", today.average_salary != null ? `$${Math.round(today.average_salary)}` : "—"],
+    ]
+      .map(([l, n]) => `<div class="stat"><div class="n">${escapeHtml(String(n))}</div><div class="l">${l}</div></div>`)
+      .join("");
+
+    $("#career-today-top10").innerHTML =
+      (today.top_10_opportunities || [])
+        .map(
+          (j) => `<article class="job-card">
+            <h3>${escapeHtml(j.title)}</h3>
+            <p class="meta">${escapeHtml(j.company)} · Match ${j.score}% · ${escapeHtml(j.salary || "")}</p>
+          </article>`
+        )
+        .join("") || "<p class='note'>No opportunities yet. Click RUN NOW.</p>";
+
+    $("#career-today-trends").innerHTML = [
+      [
+        "Top companies",
+        (today.top_companies_hiring || []).map((c) => `${c.company} (${c.roles})`).join(", ") || "—",
+      ],
+      [
+        "Skill trends",
+        (today.skill_trends || []).map((s) => s.technology).slice(0, 8).join(", ") || "—",
+      ],
+      [
+        "Missing keywords",
+        (today.missing_keywords || []).map((s) => s.skill_or_tech).slice(0, 8).join(", ") || "—",
+      ],
+    ]
+      .map(([l, v]) => `<div class="metric-row"><span>${escapeHtml(l)}</span><strong>${escapeHtml(String(v))}</strong></div>`)
+      .join("");
 
     $("#career-notifications").innerHTML =
       (brief.notifications || [])
@@ -929,7 +973,7 @@
           (n) =>
             `<article class="job-card"><h3>${escapeHtml(n.type)}</h3><p class="meta">${escapeHtml(n.message)}</p></article>`
         )
-        .join("") || "<p class='note'>No notifications. Alerts appear for Match Score ≥ 80% and due follow-ups.</p>";
+        .join("") || "<p class='note'>No notifications. Alerts appear for Match Score ≥ 90% / 80% and due follow-ups.</p>";
 
     $("#career-brief-stats").innerHTML = [
       ["New jobs today", (brief.new_jobs_found || []).length],
@@ -1019,25 +1063,38 @@
     chip.addEventListener("click", () => switchCareerPanel(chip.dataset.careerPanel))
   );
 
-  $("#btn-career-run")?.addEventListener("click", async () => {
-    const btn = $("#btn-career-run");
+  async function runCareerAgent(endpoint, btn, doneLabel) {
     btn.disabled = true;
+    const prev = btn.textContent;
     btn.textContent = "Running…";
     try {
-      const result = await api("/api/career-agent/run-morning", { method: "POST" });
-      alert(
-        `Career Agent finished.\nFetched ${result.refresh?.fetched ?? "—"}, matched ${result.refresh?.matched ?? "—"}.\n` +
-          `Notifications: ${(result.notifications || []).length}. Auto-apply: off.`
-      );
+      const result = await api(endpoint, { method: "POST" });
+      if (result.skipped) {
+        alert(result.reason || "Run skipped — another search is in progress.");
+      } else {
+        alert(
+          `Career Agent 2.0 finished (${result.trigger || "run"}).\n` +
+            `Fetched ${result.refresh?.fetched ?? "—"}, matched ${result.refresh?.matched ?? "—"}.\n` +
+            `Notifications: ${(result.notifications || []).length}. Auto-apply: off.`
+        );
+      }
       await loadCareerAgent();
-      switchCareerPanel("brief");
+      switchCareerPanel("today");
     } catch (err) {
       $("#career-meta").textContent = String(err.message || err);
     } finally {
       btn.disabled = false;
-      btn.textContent = "Run Morning Agent";
+      btn.textContent = doneLabel || prev;
     }
-  });
+  }
+
+  $("#btn-career-run-now")?.addEventListener("click", () =>
+    runCareerAgent("/api/career-agent/run-now", $("#btn-career-run-now"), "RUN NOW")
+  );
+
+  $("#btn-career-run")?.addEventListener("click", () =>
+    runCareerAgent("/api/career-agent/run-morning", $("#btn-career-run"), "Run Morning Agent")
+  );
 
   $("#btn-career-brief")?.addEventListener("click", async () => {
     await api("/api/career-agent/daily-brief?rebuild=true");

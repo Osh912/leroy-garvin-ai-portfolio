@@ -95,9 +95,11 @@ def test_score_range():
     assert "skill_match" in breakdown
     assert "resume_match" in breakdown
     assert "portfolio_match" in breakdown
-    assert breakdown["weights"]["skill_match"] == 0.25
+    assert breakdown["weights"]["skill_match"] == 0.35
+    assert breakdown["weights"]["interview_readiness"] == 0.25
     assert breakdown.get("interview_probability") is None
-    assert breakdown["scoring_mode"] == "transparent_match_score_v1"
+    assert breakdown["scoring_mode"] == "transparent_match_score_v2"
+    assert "interview_readiness" in breakdown["components"]
 
 
 def test_blocks_placeholder_company():

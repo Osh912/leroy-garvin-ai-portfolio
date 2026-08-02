@@ -22,6 +22,7 @@ from app.services.pipeline_stages import normalize_status
 BRIEFS_DIR = ROOT / "data" / "daily_briefs"
 AGENT_LAST = ROOT / "data" / "career_agent_last.json"
 HIGH_SCORE_THRESHOLD = 80.0
+ALERT_SCORE_THRESHOLD = 90.0
 
 # Technologies frequently seen in remote ops/automation postings (for gap analysis only)
 TECH_VOCAB = [
@@ -76,29 +77,100 @@ def _profile_skill_set() -> set[str]:
     return set(skills + tools)
 
 
-async def run_career_agent_morning(db: Session, *, prepare_packets: bool = True) -> dict[str, Any]:
+async def run_career_agent_morning(
+    db: Session,
+    *,
+    prepare_packets: bool = True,
+    force: bool = False,
+    trigger: str = "scheduler",
+) -> dict[str, Any]:
     """
-    8:00 AM autonomous run:
-    search boards → purge expired/unverified → score → packets → Daily Brief.
+    Autonomous / manual RUN NOW:
+    search boards → verify active → purge → score → packets → prep → analytics brief.
     Never auto-submits. Never sends email.
     """
+    from app.services.agent_log import acquire_run_lock, log_action, release_run_lock
+    from app.services.company_cache import set_cached_company
     from app.services.interview_pipeline import morning_refresh
+    from app.services.recruiter_analytics import build_analytics_dashboard
 
-    refresh_log = await morning_refresh(db, prepare_packets=prepare_packets)
-    brief = build_daily_brief(db, refresh_log=refresh_log)
-    save_daily_brief(brief)
-    AGENT_LAST.parent.mkdir(parents=True, exist_ok=True)
-    AGENT_LAST.write_text(json.dumps({"ran_at": brief["generated_at"], "brief_date": brief["date"]}, indent=2), encoding="utf-8")
-    return {
-        "ok": True,
-        "mode": "ai_career_agent",
-        "auto_apply": False,
-        "auto_email": False,
-        "approval_required": True,
-        "refresh": refresh_log,
-        "brief": brief,
-        "notifications": brief.get("notifications") or [],
-    }
+    if not acquire_run_lock(force=force):
+        log_action("run_skipped_duplicate", trigger=trigger)
+        return {
+            "ok": False,
+            "skipped": True,
+            "reason": "Another agent run is already in progress. Use RUN NOW with force, or wait.",
+            "auto_apply": False,
+            "auto_email": False,
+        }
+
+    try:
+        log_action("career_agent_start", trigger=trigger, force=force)
+        refresh_log = await morning_refresh(db, prepare_packets=prepare_packets)
+        # Cache lightweight company signals from top packets (local only)
+        for p in (refresh_log.get("top_10") or [])[:10]:
+            set_cached_company(
+                p.get("company") or "",
+                {
+                    "title": p.get("title"),
+                    "match_score": p.get("match_score") or p.get("match_percentage"),
+                    "why_match": p.get("why_match"),
+                    "cached_from": "career_agent_run",
+                },
+            )
+        # Refresh analytics snapshot (local compute — no side-effect to APIs)
+        try:
+            analytics = build_analytics_dashboard(db)
+        except Exception as exc:  # noqa: BLE001
+            analytics = {"error": str(exc)}
+            log_action("analytics_update_failed", error=str(exc))
+
+        brief = build_daily_brief(db, refresh_log=refresh_log)
+        brief["todays_brief"] = build_todays_brief(db, refresh_log=refresh_log, analytics=analytics)
+        brief["notifications"] = _merge_notifications(brief.get("notifications") or [], db, refresh_log)
+        save_daily_brief(brief)
+        AGENT_LAST.parent.mkdir(parents=True, exist_ok=True)
+        AGENT_LAST.write_text(
+            json.dumps(
+                {
+                    "ran_at": brief["generated_at"],
+                    "brief_date": brief["date"],
+                    "trigger": trigger,
+                    "mode": "ai_career_agent_2_0",
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        log_action(
+            "career_agent_complete",
+            trigger=trigger,
+            fetched=refresh_log.get("fetched"),
+            matched=refresh_log.get("matched"),
+            packets=refresh_log.get("packets_prepared"),
+        )
+        release_run_lock(ok=True, trigger=trigger)
+        return {
+            "ok": True,
+            "mode": "ai_career_agent_2_0",
+            "trigger": trigger,
+            "auto_apply": False,
+            "auto_email": False,
+            "approval_required": True,
+            "refresh": refresh_log,
+            "brief": brief,
+            "todays_brief": brief["todays_brief"],
+            "notifications": brief.get("notifications") or [],
+        }
+    except Exception as exc:  # noqa: BLE001
+        log_action("career_agent_failed", trigger=trigger, error=str(exc))
+        release_run_lock(ok=False, error=str(exc))
+        raise
+
+
+async def run_now(db: Session, *, prepare_packets: bool = True) -> dict[str, Any]:
+    """Manual RUN NOW — same pipeline as morning, force lock override."""
+    return await run_career_agent_morning(db, prepare_packets=prepare_packets, force=True, trigger="run_now")
 
 
 def build_daily_brief(db: Session, *, refresh_log: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -129,6 +201,7 @@ def build_daily_brief(db: Session, *, refresh_log: dict[str, Any] | None = None)
         for j in scored[:15]
     ]
     high_score = [b for b in best if b["notify"]]
+    alert_90 = [b for b in best if float(b.get("score") or 0) >= ALERT_SCORE_THRESHOLD]
     # Highest interview probability = highest match score among tracked apps / jobs (transparent match, not invented %)
     highest = None
     if apps:
@@ -206,6 +279,16 @@ def build_daily_brief(db: Session, *, refresh_log: dict[str, Any] | None = None)
     closing_soon = _jobs_closing_within_48h(jobs, apps)
 
     notifications = []
+    if alert_90:
+        notifications.append(
+            {
+                "type": "new_90_plus_matches",
+                "threshold": ALERT_SCORE_THRESHOLD,
+                "count": len(alert_90),
+                "jobs": alert_90,
+                "message": f"{len(alert_90)} job(s) scored ≥ {ALERT_SCORE_THRESHOLD}% Match Score — priority review (never auto-applied).",
+            }
+        )
     if high_score:
         notifications.append(
             {
@@ -230,6 +313,21 @@ def build_daily_brief(db: Session, *, refresh_log: dict[str, Any] | None = None)
                 "type": "upcoming_interviews",
                 "count": len(upcoming_interviews),
                 "message": f"{len(upcoming_interviews)} upcoming interview(s) — generate Interview Intelligence before each.",
+            }
+        )
+    high_pay = [
+        b
+        for b in best
+        if isinstance(b.get("salary"), str)
+        and any(x in b["salary"] for x in ["100", "110", "120", "130", "140", "150"])
+    ]
+    if high_pay:
+        notifications.append(
+            {
+                "type": "high_paying_remote",
+                "count": len(high_pay),
+                "jobs": high_pay[:5],
+                "message": f"{len(high_pay)} high-listed-salary remote match(es) in top ranked set (from posting text only).",
             }
         )
 
@@ -280,6 +378,150 @@ def build_daily_brief(db: Session, *, refresh_log: dict[str, Any] | None = None)
         ],
     }
     return brief
+
+
+def build_todays_brief(
+    db: Session,
+    *,
+    refresh_log: dict[str, Any] | None = None,
+    analytics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Dashboard-oriented Today's Brief — additive to Daily Brief."""
+    today = date.today()
+    since = datetime.combine(today, datetime.min.time())
+    jobs = db.query(Job).all()
+    apps = db.query(Application).all()
+    live = [j for j in jobs if j.status not in {"inactive", "purged"}]
+    verified = [j for j in live if j.is_remote]
+    new_today = [j for j in live if j.found_at and j.found_at >= since]
+    top10 = sorted(live, key=lambda j: float(j.score or 0), reverse=True)[:10]
+    ready = sum(1 for a in apps if normalize_status(a.status) in {"ready", "saved"})
+    sent = sum(1 for a in apps if a.date_applied or normalize_status(a.status) in {
+        "applied",
+        "recruiter_viewed",
+        "recruiter_replied",
+        "phone_screen",
+        "technical_interview",
+        "hiring_manager",
+        "final_interview",
+        "offer",
+        "accepted",
+    })
+    replies = sum(
+        1
+        for a in apps
+        if normalize_status(a.status)
+        in {
+            "recruiter_replied",
+            "phone_screen",
+            "technical_interview",
+            "hiring_manager",
+            "final_interview",
+            "offer",
+            "accepted",
+        }
+    )
+    interviews = sum(
+        1
+        for a in apps
+        if a.interview_date
+        or normalize_status(a.status)
+        in {"phone_screen", "technical_interview", "hiring_manager", "final_interview"}
+    )
+    offers = sum(1 for a in apps if normalize_status(a.status) in {"offer", "accepted"})
+    salary = _salary_trends(live)
+    company_counts = Counter(j.company for j in live)
+    missing, freq = _skill_gaps(live)
+    kpis = (analytics or {}).get("kpis") or {}
+    return {
+        "date": today.isoformat(),
+        "jobs_searched_today": (refresh_log or {}).get("fetched"),
+        "verified_remote_jobs": len(verified),
+        "new_jobs_today": len(new_today),
+        "top_10_opportunities": [
+            {
+                "job_id": j.id,
+                "company": j.company,
+                "title": j.title,
+                "score": round(float(j.score or 0), 1),
+                "salary": j.salary_text or "Not listed",
+                "url": j.url,
+            }
+            for j in top10
+        ],
+        "applications_ready": ready,
+        "applications_sent": sent,
+        "recruiter_replies": replies,
+        "interviews_scheduled": interviews,
+        "offers": offers,
+        "average_salary": salary.get("average"),
+        "salary_samples": salary.get("samples"),
+        "top_companies_hiring": [
+            {"company": c, "roles": n} for c, n in company_counts.most_common(8)
+        ],
+        "skill_trends": freq[:10],
+        "missing_keywords": missing[:10],
+        "analytics_kpis": {
+            "response_rate": kpis.get("recruiter_response_rate"),
+            "interview_rate": kpis.get("interview_rate"),
+            "follow_ups_due": kpis.get("follow_ups_due"),
+        },
+        "auto_apply": False,
+        "auto_email": False,
+        "fabricated": False,
+        "scoring_mode": "transparent_match_score_v2",
+    }
+
+
+def _merge_notifications(
+    base: list[dict[str, Any]],
+    db: Session,
+    refresh_log: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    apps = db.query(Application).all()
+    # Recruiter replies / interview invitations from status transitions
+    replies = [
+        a
+        for a in apps
+        if normalize_status(a.status) in {"recruiter_replied", "recruiter_viewed"}
+        and a.updated_at
+        and a.updated_at.date() == date.today()
+    ]
+    if replies:
+        base.append(
+            {
+                "type": "recruiter_replies",
+                "count": len(replies),
+                "message": f"{len(replies)} recruiter view/reply update(s) today — review tracker (no auto-email).",
+            }
+        )
+    invites = [
+        a
+        for a in apps
+        if normalize_status(a.status)
+        in {"phone_screen", "technical_interview", "hiring_manager", "final_interview"}
+        and a.updated_at
+        and a.updated_at.date() == date.today()
+    ]
+    if invites:
+        base.append(
+            {
+                "type": "interview_invitations",
+                "count": len(invites),
+                "message": f"{len(invites)} interview-stage update(s) today — open Interview Intelligence.",
+            }
+        )
+    closing = _jobs_closing_within_48h(db.query(Job).all(), apps)
+    if closing:
+        base.append(
+            {
+                "type": "jobs_closing_48h",
+                "count": len(closing),
+                "items": closing,
+                "message": f"{len(closing)} tracked deadline(s) within 48 hours (only when date is known).",
+            }
+        )
+    return base
 
 
 def save_daily_brief(brief: dict[str, Any]) -> Path:

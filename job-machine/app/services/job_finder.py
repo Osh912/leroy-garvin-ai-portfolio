@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import ROOT, get_settings
 from app.models import Application, Job
 from app.services.active_check import verify_jobs_active
+from app.services.agent_log import log_action
 from app.services.filters import (
     format_estimated_salary,
     is_priority_remote_company,
@@ -37,6 +39,8 @@ from app.services.sources import (
     fetch_remoteok,
     fetch_remotive,
     fetch_weworkremotely,
+    fetch_with_retry,
+    fetch_workable_company,
 )
 
 
@@ -77,30 +81,42 @@ async def search_jobs(
     rejected_inactive = 0
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        fetchers: list[tuple[str, Any]] = [
-            ("remoteok", fetch_remoteok(client)),
-            ("weworkremotely", fetch_weworkremotely(client)),
+        # Concurrent source fetches with one retry on failure / rate limits
+        tasks: list[tuple[str, Any]] = [
+            ("remoteok", lambda: fetch_remoteok(client)),
+            ("weworkremotely", lambda: fetch_weworkremotely(client)),
+            ("remotive", lambda: fetch_remotive(client)),
+            ("jobicy", lambda: fetch_jobicy(client)),
+            ("arbeitnow", lambda: fetch_arbeitnow(client)),
         ]
         for board in settings.greenhouse_board_list:
-            fetchers.append((f"greenhouse:{board}", fetch_greenhouse_board(client, board)))
+            b = board
+            tasks.append((f"greenhouse:{b}", lambda b=b: fetch_greenhouse_board(client, b)))
         for company in settings.lever_company_list:
-            fetchers.append((f"lever:{company}", fetch_lever_company(client, company)))
+            c = company
+            tasks.append((f"lever:{c}", lambda c=c: fetch_lever_company(client, c)))
         for board in settings.ashby_board_list:
-            fetchers.append((f"ashby:{board}", fetch_ashby_board(client, board)))
-        fetchers.extend(
-            [
-                ("remotive", fetch_remotive(client)),
-                ("jobicy", fetch_jobicy(client)),
-                ("arbeitnow", fetch_arbeitnow(client)),
-            ]
-        )
+            b = board
+            tasks.append((f"ashby:{b}", lambda b=b: fetch_ashby_board(client, b)))
+        for company in settings.workable_company_list:
+            c = company
+            tasks.append((f"workable:{c}", lambda c=c: fetch_workable_company(client, c)))
 
-        for name, coro in fetchers:
+        async def _one(name: str, factory):
             try:
-                rows = await coro
-                collected.extend(rows)
+                rows = await fetch_with_retry(factory, attempts=2, label=name)
+                return name, rows, None
             except Exception as exc:  # noqa: BLE001
-                errors.append(f"{name}: {exc}")
+                return name, [], str(exc)
+
+        results = await asyncio.gather(*[_one(n, f) for n, f in tasks])
+        for name, rows, err in results:
+            if err:
+                errors.append(f"{name}: {err}")
+                log_action("source_failed", source=name, error=err)
+            else:
+                collected.extend(rows)
+                log_action("source_ok", source=name, count=len(rows))
 
     candidates: list[dict[str, Any]] = []
     for job in collected:
@@ -196,17 +212,19 @@ async def search_jobs(
         "rejected_inactive": rejected_inactive,
         "errors": errors,
         "jobs": kept,
-        "ranking_mode": "transparent_match_score",
+        "ranking_mode": "transparent_match_score_v2",
         "remote_mode": "strict",
         "production_mode": True,
+        "concurrent_sources": True,
         "refreshed_at": datetime.utcnow().isoformat() + "Z",
         "weights": {
-            "skill_match": 0.25,
-            "resume_match": 0.20,
-            "portfolio_match": 0.20,
-            "experience_fit": 0.15,
-            "remote_eligibility": 0.10,
+            "skill_match": 0.35,
+            "interview_readiness": 0.25,
+            "remote_eligibility": 0.15,
             "salary_fit": 0.10,
+            "career_growth": 0.05,
+            "resume_match": 0.05,
+            "portfolio_match": 0.05,
         },
         "filters_applied": {
             "min_salary": min_salary,

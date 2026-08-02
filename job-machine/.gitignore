@@ -11,5 +11,9 @@ data/daily_briefs/
 data/weekly_reports/
 data/career_agent_last.json
 data/morning_refresh_last.json
+data/agent_actions.log
+data/agent_run.lock
+data/company_cache.json
+data/last_refresh.json
 .pytest_cache/
 .DS_Store

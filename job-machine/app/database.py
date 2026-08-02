@@ -31,6 +31,21 @@ def init_db() -> None:
                 conn.execute(text("ALTER TABLE applications ADD COLUMN interview_prep TEXT DEFAULT '{}'"))
             if "analytics_json" not in cols:
                 conn.execute(text("ALTER TABLE applications ADD COLUMN analytics_json TEXT DEFAULT '{}'"))
+            # Recruiter CRM column adds (Agent 2.0)
+            try:
+                crm_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(recruiter_contacts)"))}
+            except Exception:  # noqa: BLE001
+                crm_cols = set()
+            if crm_cols:
+                alters = {
+                    "role": "ALTER TABLE recruiter_contacts ADD COLUMN role TEXT DEFAULT ''",
+                    "application_date": "ALTER TABLE recruiter_contacts ADD COLUMN application_date DATE",
+                    "status": "ALTER TABLE recruiter_contacts ADD COLUMN status TEXT DEFAULT 'active'",
+                    "referral_source": "ALTER TABLE recruiter_contacts ADD COLUMN referral_source TEXT DEFAULT ''",
+                }
+                for col, sql in alters.items():
+                    if col not in crm_cols:
+                        conn.execute(text(sql))
             conn.commit()
 
 

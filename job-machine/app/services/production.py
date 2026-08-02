@@ -141,11 +141,14 @@ def source_display(source: str) -> str:
         return f"Lever ({s.split(':', 1)[1]})"
     if s.startswith("ashby:"):
         return f"Ashby ({s.split(':', 1)[1]})"
+    if s.startswith("workable:"):
+        return f"Workable ({s.split(':', 1)[1]})"
     mapping = {
         "remoteok": "RemoteOK",
         "remotive": "Remotive",
         "jobicy": "Jobicy",
         "weworkremotely": "We Work Remotely",
+        "workable": "Workable",
         "arbeitnow": "Arbeitnow",
         "manual": "Manual Import",
     }

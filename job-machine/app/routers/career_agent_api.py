@@ -21,13 +21,16 @@ def career_agent_status():
         except json.JSONDecodeError:
             last = None
     return {
-        "mode": "ai_career_agent",
+        "mode": "ai_career_agent_2_0",
         "auto_apply": False,
         "auto_email": False,
         "approval_required": True,
         "notify_threshold": 80,
+        "alert_threshold": 90,
+        "run_now_available": True,
         "last_run": last,
         "has_brief": load_latest_brief() is not None,
+        "scoring_mode": "transparent_match_score_v2",
     }
 
 
@@ -35,7 +38,27 @@ def career_agent_status():
 async def run_morning(prepare_packets: bool = True, db: Session = Depends(get_db)):
     from app.services.career_agent import run_career_agent_morning
 
-    return await run_career_agent_morning(db, prepare_packets=prepare_packets)
+    return await run_career_agent_morning(
+        db, prepare_packets=prepare_packets, force=False, trigger="api_morning"
+    )
+
+
+@router.post("/run-now")
+async def run_now_endpoint(prepare_packets: bool = True, db: Session = Depends(get_db)):
+    """Manual RUN NOW — full agent pipeline without waiting for 8:00 AM."""
+    from app.services.career_agent import run_now
+
+    return await run_now(db, prepare_packets=prepare_packets)
+
+
+@router.get("/todays-brief")
+def todays_brief(db: Session = Depends(get_db)):
+    from app.services.career_agent import build_todays_brief, load_latest_brief
+
+    latest = load_latest_brief()
+    if latest and latest.get("todays_brief"):
+        return latest["todays_brief"]
+    return build_todays_brief(db, refresh_log=None, analytics=None)
 
 
 @router.get("/daily-brief")

@@ -23,12 +23,21 @@ ROLE_KEYWORDS = [
     "n8n",
     "airtable",
     "prompt",
+    "prompt engineer",
     "conversational",
     "operations specialist",
     "process automation",
     "rpa",
     "zapier",
     "make.com",
+    "technical operations",
+    "ai enablement",
+    "python automation",
+    "qa automation",
+    "technical consultant",
+    "remote operations",
+    "openai",
+    "support engineer",
 ]
 
 PRIORITY_TITLE_TERMS = [
@@ -46,6 +55,13 @@ PRIORITY_TITLE_TERMS = [
     "operations specialist",
     "support specialist",
     "support engineer",
+    "technical operations",
+    "prompt engineer",
+    "ai enablement",
+    "qa automation",
+    "technical consultant",
+    "remote operations",
+    "python automation",
 ]
 
 LEVEL_KEYWORDS = [
@@ -507,6 +523,9 @@ def is_us_friendly(job: dict[str, Any]) -> bool:
             "remote-us",
             "remote us",
             "remote, us",
+            "remote (us)",
+            "(us)",
+            "us remote",
             "america",
             "california",
             "new york",
@@ -834,6 +853,53 @@ def is_entry_level_friendly(job: dict[str, Any]) -> bool:
     return hint == "mid-unspecified"
 
 
+def is_contract_or_commission_only(job: dict[str, Any]) -> bool:
+    blob = text_blob(job)
+    title = normalize(job.get("title", ""))
+    if any(x in title for x in ["contract only", "commission only", "1099 only"]):
+        return True
+    if re.search(r"\b(contract[-\s]?only|commission[-\s]?only|commission[-\s]?based only)\b", blob):
+        return True
+    if "this is a contract" in blob and "full-time" not in blob and "full time" not in blob:
+        return True
+    return False
+
+
+def is_recruiter_spam(job: dict[str, Any]) -> bool:
+    company = normalize(job.get("company", ""))
+    blob = text_blob(job)
+    spam_companies = ["talent.com", "ziprecruiter spam", "indeed apply bot"]
+    if any(s in company for s in spam_companies):
+        return True
+    if "urgent!!! apply now!!!" in blob or "make $500/day" in blob:
+        return True
+    return False
+
+
+def is_stale_listing(job: dict[str, Any], *, max_age_days: int = 30) -> bool:
+    """Reject jobs older than max_age_days unless explicitly marked reposted."""
+    from datetime import datetime, timedelta
+
+    blob = text_blob(job)
+    if "reposted" in blob or "re-posted" in blob or "bump" in blob:
+        return False
+    posted = job.get("posted_at") or job.get("date") or job.get("created_at")
+    if not posted:
+        return False  # unknown age — do not invent staleness
+    try:
+        if isinstance(posted, (int, float)):
+            # epoch seconds or ms
+            ts = float(posted)
+            if ts > 1e12:
+                ts /= 1000.0
+            dt = datetime.utcfromtimestamp(ts)
+        else:
+            dt = datetime.fromisoformat(str(posted).replace("Z", "")[:19])
+    except Exception:  # noqa: BLE001
+        return False
+    return dt < datetime.utcnow() - timedelta(days=max_age_days)
+
+
 def should_keep(
     job: dict[str, Any],
     *,
@@ -859,6 +925,15 @@ def should_keep(
         if not verification["verified"]:
             return False
     elif not is_remote(job):
+        return False
+
+    # Hybrid / on-site / relocation already fail verify_remote in strict mode;
+    # keep explicit rejects for contract/commission/spam/stale.
+    if is_contract_or_commission_only(job):
+        return False
+    if is_recruiter_spam(job):
+        return False
+    if is_stale_listing(job, max_age_days=30):
         return False
 
     if us_only and not is_us_friendly(job):

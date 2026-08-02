@@ -70,7 +70,10 @@ def rank_jobs_by_interview_probability(db: Session, *, limit: int = 10) -> list[
             bd = json.loads(row.score_breakdown or "{}")
         except json.JSONDecodeError:
             bd = {}
-        if bd.get("scoring_mode") != "transparent_match_score_v1":
+        if bd.get("scoring_mode") not in {
+            "transparent_match_score_v1",
+            "transparent_match_score_v2",
+        }:
             score, breakdown = score_job(jd)
             projects = match_portfolio(jd)
             why = match_reason(jd, projects)
