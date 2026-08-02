@@ -779,3 +779,114 @@ def analytics_export(fmt: str, db: Session = Depends(get_db)):
             headers={"Content-Disposition": "attachment; filename=recruiter_analytics.pdf"},
         )
     raise HTTPException(400, "Supported formats: csv, excel, xlsx, pdf, json")
+
+
+# --- Application Assistant (local hiring process) ---
+
+
+@router.get("/assistant")
+def assistant_home(db: Session = Depends(get_db)):
+    from app.services.application_assistant import assistant_overview
+
+    return assistant_overview(db)
+
+
+@router.post("/assistant/prepare/{job_id}")
+def assistant_prepare(job_id: int, db: Session = Depends(get_db)):
+    from app.services.application_assistant import prepare_application
+
+    try:
+        return prepare_application(job_id, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/assistant/applications/{app_id}")
+def assistant_get_application(app_id: int, db: Session = Depends(get_db)):
+    from app.services.application_assistant import assistant_bundle
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    return assistant_bundle(row)
+
+
+@router.patch("/assistant/applications/{app_id}/checklist")
+def assistant_checklist(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.application_assistant import update_checklist
+
+    try:
+        return update_checklist(app_id, payload or {}, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.patch("/assistant/applications/{app_id}/notes")
+def assistant_notes(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.application_assistant import update_notes
+
+    try:
+        return update_notes(app_id, payload or {}, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/assistant/calendar")
+def assistant_calendar(db: Session = Depends(get_db)):
+    from app.services.application_assistant import list_calendar
+
+    return {"events": list_calendar(db), "fabricated": False, "local_only": True}
+
+
+@router.post("/assistant/applications/{app_id}/calendar")
+def assistant_calendar_upsert(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.application_assistant import upsert_calendar_event
+
+    try:
+        return upsert_calendar_event(app_id, payload or {}, db)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.delete("/assistant/applications/{app_id}/calendar/{event_id}")
+def assistant_calendar_delete(app_id: int, event_id: str, db: Session = Depends(get_db)):
+    from app.services.application_assistant import delete_calendar_event
+
+    try:
+        return delete_calendar_event(app_id, event_id, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/assistant/lessons")
+def assistant_lessons(db: Session = Depends(get_db)):
+    from app.services.application_assistant import list_lessons
+
+    return {"lessons": list_lessons(db), "fabricated": False, "local_only": True}
+
+
+@router.post("/assistant/applications/{app_id}/lessons")
+def assistant_add_lesson(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.application_assistant import add_lesson
+
+    try:
+        return add_lesson(app_id, payload or {}, db)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/assistant/offers")
+def assistant_offers(db: Session = Depends(get_db)):
+    from app.services.application_assistant import compare_offers
+
+    return compare_offers(db)
+
+
+@router.patch("/assistant/applications/{app_id}/offer")
+def assistant_offer(app_id: int, payload: dict, db: Session = Depends(get_db)):
+    from app.services.application_assistant import update_offer
+
+    try:
+        return update_offer(app_id, payload or {}, db)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc

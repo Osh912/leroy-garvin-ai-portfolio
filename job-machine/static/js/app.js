@@ -37,7 +37,16 @@
     interview: "phone_screen",
   };
 
-  const state = { jobs: [], apps: [], packets: [], quick: new Set(), charts: [] };
+  const state = {
+    jobs: [],
+    apps: [],
+    packets: [],
+    quick: new Set(),
+    charts: [],
+    assistant: null,
+    assistantAppId: null,
+    assistantPanel: "prepare",
+  };
 
   function normalizeStage(s) {
     const key = String(s || "saved").toLowerCase().replaceAll(" ", "_");
@@ -161,6 +170,7 @@
       </div>
       <div class="card-actions">
         ${posting ? `<a class="btn primary" href="${escapeAttr(posting)}" target="_blank" rel="noopener noreferrer">Open Job</a>` : ""}
+        <button type="button" class="btn primary" data-action="prepare-app" data-id="${job.id}">Prepare Application</button>
         <button type="button" class="btn" data-action="prep" data-id="${job.id}">Interview Prep</button>
         <button type="button" class="btn" data-action="generate" data-id="${job.id}">Resume + Cover</button>
         <button type="button" class="btn" data-action="export-job" data-id="${job.id}">Export</button>
@@ -176,6 +186,7 @@
       ${app.status === "ready" ? `<span class="package-ready">Apply Package Ready</span>` : ""}
       <div class="card-actions">
         ${app.status === "ready" || app.status === "saved" ? `<button type="button" class="btn primary" data-action="approve" data-id="${app.id}">Approve to Apply</button>` : ""}
+        <button type="button" class="btn" data-action="open-assistant" data-id="${app.id}">Assistant</button>
         <button type="button" class="btn" data-action="open-app" data-id="${app.id}">Open Packet</button>
         <button type="button" class="btn" data-action="export-app" data-id="${app.id}">Export</button>
       </div>
@@ -198,6 +209,7 @@
       <div class="tags">${projects}</div>
       <div class="card-actions">
         ${p.url ? `<a class="btn primary" href="${escapeAttr(p.url)}" target="_blank" rel="noopener noreferrer">Open Job</a>` : ""}
+        <button type="button" class="btn primary" data-action="prepare-app" data-id="${p.job_id}">Prepare Application</button>
         <button type="button" class="btn" data-action="prep" data-id="${p.job_id}">Interview Prep</button>
         <button type="button" class="btn" data-action="approve" data-id="${p.application_id}">Approve to Apply</button>
         <button type="button" class="btn" data-action="export-app" data-id="${p.application_id}">Export</button>
@@ -291,6 +303,8 @@
           <td>${Math.round(a.application_score)}</td>
           <td class="row-actions">
             ${a.status === "ready" || a.status === "saved" ? `<button type="button" class="btn primary" data-action="approve" data-id="${a.id}">Approve</button>` : ""}
+            <button type="button" class="btn" data-action="prepare-app" data-id="${a.job_id}">Prepare</button>
+            <button type="button" class="btn" data-action="open-assistant" data-id="${a.id}">Assistant</button>
             <button type="button" class="btn" data-action="prep-app" data-id="${a.job_id}">Prep</button>
             <button type="button" class="btn" data-action="export-app" data-id="${a.id}">Export</button>
             <button type="button" class="btn" data-action="open-app" data-id="${a.id}">Packet</button>
@@ -559,6 +573,224 @@
     URL.revokeObjectURL(url);
   }
 
+  function currentAssistantApp() {
+    const apps = state.assistant?.applications || [];
+    return apps.find((a) => a.application_id === state.assistantAppId) || null;
+  }
+
+  function switchAssistantPanel(name) {
+    state.assistantPanel = name;
+    $$("[data-assistant-panel]").forEach((c) =>
+      c.classList.toggle("active", c.dataset.assistantPanel === name)
+    );
+    $$(".assistant-panel").forEach((p) =>
+      p.classList.toggle("active", p.id === `assistant-panel-${name}`)
+    );
+  }
+
+  function renderAssistantAppList() {
+    const apps = state.assistant?.applications || [];
+    $("#assistant-app-list").innerHTML =
+      apps
+        .map((a) => {
+          const active = a.application_id === state.assistantAppId ? "active" : "";
+          const done = a.checklist_complete ? " · checklist ✓" : "";
+          return `<button type="button" class="assistant-app-item ${active}" data-action="select-assistant-app" data-id="${a.application_id}">
+            <strong>${escapeHtml(a.company)}</strong>
+            <span>${escapeHtml(a.position)}</span>
+            <span class="meta">${escapeHtml(a.stage_label || a.status)}${done}</span>
+          </button>`;
+        })
+        .join("") || "<p class='note'>No applications yet. Use Prepare Application on a job.</p>";
+  }
+
+  function renderAssistantPrepare(app) {
+    if (!app) {
+      $("#assistant-prepare-body").innerHTML =
+        "<p class='note'>Choose an application on the left, or use <strong>Prepare Application</strong> on a job card.</p>";
+      return;
+    }
+    const projects = (app.portfolio_refs || [])
+      .map((p) => `<span class="tag">${escapeHtml(p.name || "")}</span>`)
+      .join("");
+    $("#assistant-prepare-body").innerHTML = `
+      <div class="metric-row"><span>Company / Role</span><strong>${escapeHtml(app.company)} — ${escapeHtml(app.position)}</strong></div>
+      <div class="metric-row"><span>Prepared at</span><strong>${escapeHtml(fmtDate(app.prepared_at) || "Not prepared yet")}</strong></div>
+      <div class="metric-row"><span>Checklist</span><strong>${app.checklist_complete ? "Complete" : "Incomplete"}</strong></div>
+      <div class="projects-row" style="margin-top:0.75rem"><span class="projects-label">Portfolio matches</span><div class="tags">${projects || "<span class='tag'>None yet</span>"}</div></div>
+      <h3 style="margin:1rem 0 0.4rem">Recruiter summary</h3>
+      <pre class="followup-body">${escapeHtml(app.recruiter_summary || "Run Prepare Application to generate.")}</pre>
+      <h3 style="margin:1rem 0 0.4rem">Tailored resume</h3>
+      <pre class="followup-body">${escapeHtml(app.tailored_resume || "Not generated")}</pre>
+      <h3 style="margin:1rem 0 0.4rem">Cover letter</h3>
+      <pre class="followup-body">${escapeHtml(app.cover_letter || "Not generated")}</pre>
+      <div class="card-actions" style="margin-top:0.75rem">
+        ${app.job_id ? `<button type="button" class="btn primary" data-action="prepare-app" data-id="${app.job_id}">Prepare Application</button>` : ""}
+        <button type="button" class="btn" data-action="export-app" data-id="${app.application_id}">Export Packet</button>
+        ${
+          app.status === "ready" || app.status === "saved"
+            ? `<button type="button" class="btn" data-action="approve" data-id="${app.application_id}">Approve to Apply</button>`
+            : ""
+        }
+      </div>`;
+  }
+
+  function renderAssistantChecklist(app) {
+    const labels = state.assistant?.checklist_labels || {};
+    const cl = app?.checklist || {};
+    $("#assistant-checklist").innerHTML = app
+      ? Object.keys(labels)
+          .map((k) => {
+            const checked = !!cl[k];
+            return `<label class="check checklist-item">
+              <input type="checkbox" data-check-key="${k}" ${checked ? "checked" : ""}>
+              ${checked ? "✓" : "○"} ${escapeHtml(labels[k])}
+            </label>`;
+          })
+          .join("")
+      : "<p class='note'>Select an application first.</p>";
+  }
+
+  function fillAssistantNotes(app) {
+    const form = $("#assistant-notes-form");
+    if (!form) return;
+    const n = app?.application_notes || {};
+    form.recruiter_name.value = n.recruiter_name || "";
+    form.hiring_manager.value = n.hiring_manager || "";
+    form.referral.value = n.referral || "";
+    form.salary_discussed.value = n.salary_discussed || "";
+    form.interview_notes.value = n.interview_notes || "";
+    form.follow_up_reminders.value = n.follow_up_reminders || "";
+  }
+
+  function fillAssistantOffer(app) {
+    const form = $("#assistant-offer-form");
+    if (!form) return;
+    const o = app?.offer || {};
+    form.salary.value = o.salary ?? "";
+    form.bonus.value = o.bonus || "";
+    form.benefits.value = o.benefits || "";
+    form.pto.value = o.pto || "";
+    form.remote_policy.value = o.remote_policy || "";
+    form.career_growth.value = o.career_growth || "";
+    form.overall_score.value = o.overall_score ?? "";
+    form.notes.value = o.notes || "";
+  }
+
+  function renderAssistantCalendar() {
+    const events = state.assistant?.calendar || [];
+    $("#assistant-calendar-list").innerHTML =
+      events
+        .map(
+          (ev) => `<article class="job-card">
+            <div class="job-card-head">
+              <div>
+                <h3>${escapeHtml(ev.company || "")}</h3>
+                <p class="meta">${escapeHtml(ev.date || "")} ${escapeHtml(ev.time || "")} · ${escapeHtml(ev.stage_label || ev.interview_stage || "")}</p>
+                <p class="meta">${escapeHtml(ev.position || "")}</p>
+                ${(ev.interviewers || []).length ? `<p class="meta">Interviewers: ${escapeHtml((ev.interviewers || []).join(", "))}</p>` : ""}
+                ${ev.meeting_link ? `<p class="meta"><a href="${escapeAttr(ev.meeting_link)}" target="_blank" rel="noopener noreferrer">Meeting link</a></p>` : ""}
+              </div>
+              <div class="card-actions">
+                <button type="button" class="btn" data-action="delete-calendar" data-id="${ev.application_id}" data-event="${escapeAttr(ev.id)}">Remove</button>
+              </div>
+            </div>
+          </article>`
+        )
+        .join("") || "<p class='note'>No interviews scheduled yet. Add one above for the selected application.</p>";
+  }
+
+  function renderAssistantLessons() {
+    const lessons = state.assistant?.lessons || [];
+    $("#assistant-lessons-list").innerHTML =
+      lessons
+        .map(
+          (L) => `<article class="job-card">
+            <h3>${escapeHtml(L.company)} — ${escapeHtml(L.position)}</h3>
+            <p class="meta">${escapeHtml(L.interview_date || "Date not set")} · ${escapeHtml(L.stage || "")}</p>
+            ${L.what_went_well ? `<div class="why-box"><h4>Went well</h4><p>${escapeHtml(L.what_went_well)}</p></div>` : ""}
+            ${L.what_to_improve ? `<div class="why-box"><h4>Improve</h4><p>${escapeHtml(L.what_to_improve)}</p></div>` : ""}
+            ${(L.questions_asked || []).length ? `<ul>${(L.questions_asked || []).map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul>` : ""}
+          </article>`
+        )
+        .join("") || "<p class='note'>No lessons logged yet.</p>";
+  }
+
+  function renderAssistantOffers() {
+    const offers = state.assistant?.offers?.offers || [];
+    $("#assistant-offers-table tbody").innerHTML =
+      offers
+        .map(
+          (o) => `<tr>
+            <td>${escapeHtml(o.company)}</td>
+            <td>${escapeHtml(o.position)}</td>
+            <td>${o.salary != null ? "$" + Math.round(o.salary).toLocaleString() : "—"}</td>
+            <td>${escapeHtml(o.bonus || "—")}</td>
+            <td>${escapeHtml(o.benefits || "—")}</td>
+            <td>${escapeHtml(o.pto || "—")}</td>
+            <td>${escapeHtml(o.remote_policy || "—")}</td>
+            <td>${escapeHtml(o.career_growth || "—")}</td>
+            <td>${o.overall_score != null ? escapeHtml(String(o.overall_score)) : "—"}</td>
+          </tr>`
+        )
+        .join("") ||
+      `<tr><td colspan="9" class="note">No offer details recorded yet. Enter real terms above for a selected application.</td></tr>`;
+  }
+
+  function renderAssistantSelected() {
+    const app = currentAssistantApp();
+    const contact = state.assistant?.contact || {};
+    $("#assistant-meta").textContent = app
+      ? `Active: ${app.company} — ${app.position} · Local only · Contact on file: ${contact.email || ""} · ${contact.phone || ""}`
+      : `Local only · Contact on file: ${contact.email || ""} · Portfolio: ${contact.portfolio || ""} · Select or prepare an application.`;
+    if (app) {
+      const calForm = $("#assistant-calendar-form");
+      if (calForm && !calForm.company.value) calForm.company.value = app.company || "";
+    }
+    renderAssistantAppList();
+    renderAssistantPrepare(app);
+    renderAssistantChecklist(app);
+    fillAssistantNotes(app);
+    fillAssistantOffer(app);
+    renderAssistantCalendar();
+    renderAssistantLessons();
+    renderAssistantOffers();
+  }
+
+  async function loadAssistant() {
+    state.assistant = await api("/api/assistant");
+    if (
+      state.assistantAppId &&
+      !(state.assistant.applications || []).some((a) => a.application_id === state.assistantAppId)
+    ) {
+      state.assistantAppId = null;
+    }
+    if (!state.assistantAppId && (state.assistant.applications || []).length) {
+      state.assistantAppId = state.assistant.applications[0].application_id;
+    }
+    renderAssistantSelected();
+  }
+
+  async function selectAssistantApp(appId) {
+    state.assistantAppId = appId;
+    const bundle = await api(`/api/assistant/applications/${appId}`);
+    if (state.assistant) {
+      const idx = (state.assistant.applications || []).findIndex((a) => a.application_id === appId);
+      if (idx >= 0) state.assistant.applications[idx] = bundle;
+      else state.assistant.applications.unshift(bundle);
+    }
+    renderAssistantSelected();
+  }
+
+  async function prepareApplication(jobId) {
+    const bundle = await api(`/api/assistant/prepare/${jobId}`, { method: "POST" });
+    state.assistantAppId = bundle.application_id;
+    await loadAssistant();
+    switchView("assistant");
+    switchAssistantPanel("prepare");
+    return bundle;
+  }
+
   async function loadPacketsFromReady() {
     const apps = await api("/api/applications");
     const ready = apps
@@ -660,8 +892,97 @@
       if (tab.dataset.view === "analytics") loadAnalytics().catch((err) => {
         $("#analytics-meta").textContent = String(err.message || err);
       });
+      if (tab.dataset.view === "assistant") loadAssistant().catch((err) => {
+        $("#assistant-meta").textContent = String(err.message || err);
+      });
     })
   );
+
+  $("#btn-assistant-refresh")?.addEventListener("click", () =>
+    loadAssistant().catch((err) => {
+      $("#assistant-meta").textContent = String(err.message || err);
+    })
+  );
+
+  $$("[data-assistant-panel]").forEach((chip) =>
+    chip.addEventListener("click", () => switchAssistantPanel(chip.dataset.assistantPanel))
+  );
+
+  $("#assistant-checklist")?.addEventListener("change", async (e) => {
+    const input = e.target.closest("input[data-check-key]");
+    if (!input || !state.assistantAppId) return;
+    const key = input.dataset.checkKey;
+    try {
+      const bundle = await api(`/api/assistant/applications/${state.assistantAppId}/checklist`, {
+        method: "PATCH",
+        body: JSON.stringify({ [key]: input.checked }),
+      });
+      const idx = (state.assistant?.applications || []).findIndex(
+        (a) => a.application_id === state.assistantAppId
+      );
+      if (idx >= 0) state.assistant.applications[idx] = bundle;
+      renderAssistantSelected();
+    } catch (err) {
+      alert(String(err.message || err));
+    }
+  });
+
+  $("#assistant-notes-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!state.assistantAppId) return alert("Select an application first.");
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    const bundle = await api(`/api/assistant/applications/${state.assistantAppId}/notes`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    const idx = (state.assistant?.applications || []).findIndex(
+      (a) => a.application_id === state.assistantAppId
+    );
+    if (idx >= 0) state.assistant.applications[idx] = bundle;
+    alert("Notes saved locally.");
+    renderAssistantSelected();
+  });
+
+  $("#assistant-calendar-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!state.assistantAppId) return alert("Select an application first.");
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    await api(`/api/assistant/applications/${state.assistantAppId}/calendar`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    e.target.reset();
+    await loadAssistant();
+    switchAssistantPanel("calendar");
+  });
+
+  $("#assistant-lesson-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!state.assistantAppId) return alert("Select an application first.");
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    await api(`/api/assistant/applications/${state.assistantAppId}/lessons`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    e.target.reset();
+    await loadAssistant();
+    switchAssistantPanel("lessons");
+  });
+
+  $("#assistant-offer-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!state.assistantAppId) return alert("Select an application first.");
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    if (payload.salary === "") delete payload.salary;
+    if (payload.overall_score === "") delete payload.overall_score;
+    await api(`/api/assistant/applications/${state.assistantAppId}/offer`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    await loadAssistant();
+    switchAssistantPanel("offers");
+    alert("Offer details saved locally.");
+  });
 
   $("#btn-refresh-analytics")?.addEventListener("click", () =>
     loadAnalytics().catch((err) => {
@@ -773,6 +1094,31 @@
         await api(`/api/applications/${id}/approve`, { method: "POST" });
         await Promise.all([loadDashboard(), loadTracker(), loadPacketsFromReady()]);
         alert("Marked Applied. Submit the listing yourself.");
+      }
+      if (action === "prepare-app") {
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Preparing…";
+        try {
+          await prepareApplication(id);
+          alert("Application prepared locally. Review checklist before you submit.");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = label.includes("Prepare") ? label : "Prepare Application";
+        }
+      }
+      if (action === "open-assistant" || action === "select-assistant-app") {
+        await selectAssistantApp(id);
+        switchView("assistant");
+        switchAssistantPanel("prepare");
+      }
+      if (action === "delete-calendar") {
+        const eventId = btn.dataset.event;
+        if (!confirm("Remove this calendar event?")) return;
+        await api(`/api/assistant/applications/${id}/calendar/${encodeURIComponent(eventId)}`, {
+          method: "DELETE",
+        });
+        await loadAssistant();
       }
       if (action === "export-app") await exportApp(id);
       if (action === "export-job") await exportJob(id);

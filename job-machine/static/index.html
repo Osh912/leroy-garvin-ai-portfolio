@@ -14,6 +14,7 @@
     </div>
     <nav class="tabs" aria-label="Primary">
       <button type="button" class="tab active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="tab" data-view="assistant">Application Assistant</button>
       <button type="button" class="tab" data-view="analytics">Recruiter Analytics</button>
       <button type="button" class="tab" data-view="pipeline">Top 10 Packets</button>
       <button type="button" class="tab" data-view="tracker">Interview Tracker</button>
@@ -57,6 +58,142 @@
         </div>
       </div>
       <p class="note" id="pipeline-note">Auto-apply is off. Packets save under <code>data/interview_packets/</code>.</p>
+    </section>
+
+    <section id="view-assistant" class="view">
+      <div class="section-head row">
+        <div>
+          <h1>Application Assistant</h1>
+          <p>Prepare → checklist → notes → interviews → lessons → offers · Local only · Never auto-applies</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" id="btn-assistant-refresh">Refresh</button>
+        </div>
+      </div>
+      <p class="note" id="assistant-meta">Select an application or prepare one from Job Finder.</p>
+      <div class="assistant-subnav" role="tablist" aria-label="Assistant sections">
+        <button type="button" class="chip active" data-assistant-panel="prepare">Prepare</button>
+        <button type="button" class="chip" data-assistant-panel="checklist">Checklist</button>
+        <button type="button" class="chip" data-assistant-panel="notes">Notes</button>
+        <button type="button" class="chip" data-assistant-panel="calendar">Interview Calendar</button>
+        <button type="button" class="chip" data-assistant-panel="lessons">Lessons Learned</button>
+        <button type="button" class="chip" data-assistant-panel="offers">Offer Comparison</button>
+      </div>
+
+      <div class="assistant-layout">
+        <aside class="assistant-apps">
+          <h2>Applications</h2>
+          <div id="assistant-app-list" class="card-list"></div>
+        </aside>
+        <div class="assistant-main">
+          <div id="assistant-panel-prepare" class="assistant-panel active">
+            <h2>Prepare Application</h2>
+            <p class="note">One click generates tailored resume, cover letter, portfolio matches, and a recruiter summary from real job + profile data.</p>
+            <div id="assistant-prepare-body" class="metric-panel">
+              <p class="note">Choose an application on the left, or use <strong>Prepare Application</strong> on a job card.</p>
+            </div>
+          </div>
+          <div id="assistant-panel-checklist" class="assistant-panel">
+            <h2>Pre-submit Checklist</h2>
+            <p class="note">Auto-checked only when materials contain the item. Toggle after you verify.</p>
+            <div id="assistant-checklist" class="checklist"></div>
+          </div>
+          <div id="assistant-panel-notes" class="assistant-panel">
+            <h2>Application Notes</h2>
+            <form id="assistant-notes-form" class="import-form notes-form">
+              <label>Recruiter name <input name="recruiter_name"></label>
+              <label>Hiring manager <input name="hiring_manager"></label>
+              <label>Referral <input name="referral"></label>
+              <label>Salary discussed <input name="salary_discussed" placeholder="Only if actually discussed"></label>
+              <label class="full">Interview notes <textarea name="interview_notes" rows="4"></textarea></label>
+              <label class="full">Follow-up reminders <textarea name="follow_up_reminders" rows="3"></textarea></label>
+              <div class="full actions">
+                <button type="submit" class="btn primary">Save Notes</button>
+              </div>
+            </form>
+          </div>
+          <div id="assistant-panel-calendar" class="assistant-panel">
+            <h2>Interview Calendar</h2>
+            <form id="assistant-calendar-form" class="import-form notes-form">
+              <label>Date <input name="date" type="date" required></label>
+              <label>Time <input name="time" type="time"></label>
+              <label>Company <input name="company"></label>
+              <label>Interview stage
+                <select name="interview_stage">
+                  <option value="phone_screen">Phone Screen</option>
+                  <option value="technical_interview">Technical Interview</option>
+                  <option value="hiring_manager">Hiring Manager</option>
+                  <option value="final_interview">Final Interview</option>
+                  <option value="recruiter_replied">Recruiter Replied</option>
+                </select>
+              </label>
+              <label class="full">Meeting link <input name="meeting_link" type="url" placeholder="https://"></label>
+              <label class="full">Interviewer names <input name="interviewers" placeholder="Comma-separated"></label>
+              <div class="full actions">
+                <button type="submit" class="btn primary">Add to Calendar</button>
+              </div>
+            </form>
+            <div id="assistant-calendar-list" class="card-list"></div>
+          </div>
+          <div id="assistant-panel-lessons" class="assistant-panel">
+            <h2>Lessons Learned</h2>
+            <p class="note">Log real interview experience to improve future prep. Empty fields stay empty — nothing invented.</p>
+            <form id="assistant-lesson-form" class="import-form notes-form">
+              <label>Interview date <input name="interview_date" type="date"></label>
+              <label>Stage
+                <select name="stage">
+                  <option value="phone_screen">Phone Screen</option>
+                  <option value="technical_interview">Technical Interview</option>
+                  <option value="hiring_manager">Hiring Manager</option>
+                  <option value="final_interview">Final Interview</option>
+                </select>
+              </label>
+              <label class="full">What went well <textarea name="what_went_well" rows="3"></textarea></label>
+              <label class="full">What to improve <textarea name="what_to_improve" rows="3"></textarea></label>
+              <label class="full">Questions asked (one per line) <textarea name="questions_asked" rows="4"></textarea></label>
+              <div class="full actions">
+                <button type="submit" class="btn primary">Save Lesson</button>
+              </div>
+            </form>
+            <div id="assistant-lessons-list" class="card-list"></div>
+          </div>
+          <div id="assistant-panel-offers" class="assistant-panel">
+            <h2>Job Offer Comparison</h2>
+            <p class="note">Enter only real offer terms. Comparison uses recorded values — never estimates.</p>
+            <form id="assistant-offer-form" class="import-form notes-form">
+              <label>Salary <input name="salary" type="number" step="1000" min="0" placeholder="Annual USD"></label>
+              <label>Bonus <input name="bonus"></label>
+              <label>Benefits <input name="benefits"></label>
+              <label>PTO <input name="pto"></label>
+              <label>Remote policy <input name="remote_policy"></label>
+              <label>Career growth <input name="career_growth"></label>
+              <label>Overall score (1–10) <input name="overall_score" type="number" min="1" max="10" step="0.5"></label>
+              <label class="full">Offer notes <textarea name="notes" rows="3"></textarea></label>
+              <div class="full actions">
+                <button type="submit" class="btn primary">Save Offer Details</button>
+              </div>
+            </form>
+            <div class="table-wrap">
+              <table id="assistant-offers-table">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Salary</th>
+                    <th>Bonus</th>
+                    <th>Benefits</th>
+                    <th>PTO</th>
+                    <th>Remote</th>
+                    <th>Growth</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="view-analytics" class="view">

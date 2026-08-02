@@ -492,3 +492,54 @@ dialog::backdrop { background: rgba(28, 36, 32, 0.35); }
   overflow: auto;
 }
 
+.assistant-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 1rem;
+}
+.assistant-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+.assistant-apps h2 { margin: 0 0 0.6rem; font-size: 1rem; }
+.assistant-app-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+}
+.assistant-app-item strong { font-size: 0.95rem; }
+.assistant-app-item span { font-size: 0.82rem; color: var(--muted); }
+.assistant-app-item.active {
+  border-color: var(--forest);
+  box-shadow: inset 3px 0 0 var(--forest);
+}
+.assistant-panel { display: none; }
+.assistant-panel.active { display: block; }
+.assistant-panel h2 { margin-top: 0; font-family: var(--display); }
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.checklist-item { font-weight: 600; }
+.notes-form { margin-top: 0.5rem; }
+@media (max-width: 900px) {
+  .assistant-layout { grid-template-columns: 1fr; }
+}
+
