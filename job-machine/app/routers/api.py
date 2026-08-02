@@ -1,0 +1,690 @@
+from __future__ import annotations
+
+import json
+from datetime import date, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Application, Job
+from app.schemas import (
+    ApplicationIn,
+    ApplicationOut,
+    ApplicationUpdate,
+    DashboardOut,
+    ExportOut,
+    GenerateOut,
+    HighestInterviewOut,
+    InterviewPrepOut,
+    JobOut,
+    ManualJobIn,
+)
+from app.services.cover_letter import generate_cover_letter
+from app.services.filters import level_hint
+from app.services.job_finder import purge_unverified_remote, search_jobs, upsert_jobs
+from app.services.pipeline_stages import PORTFOLIO_URL, PIPELINE_STAGES, stage_label
+from app.services.portfolio_matcher import match_portfolio
+from app.services.resume_tailor import tailor_resume
+from app.services.scorer import score_job
+
+router = APIRouter(prefix="/api")
+
+
+def _job_out(job: Job, *, rank: int | None = None, is_top_10: bool = False, package_ready: bool = False) -> JobOut:
+    breakdown = json.loads(job.score_breakdown or "{}")
+    projects = json.loads(job.matched_projects or "[]")
+    from app.services.filters import verify_remote
+    from app.services.production import careers_url_for_job, source_display
+
+    verification = breakdown.get("remote_verification") or verify_remote(
+        {
+            "title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "description": job.description or "",
+            "tags": job.tags or "",
+            "source": job.source,
+            "url": job.url,
+        }
+    )
+    careers = breakdown.get("careers_url") or careers_url_for_job(
+        {"source": job.source, "url": job.url, "company": job.company}
+    )
+    active = breakdown.get("active_check") or {}
+    est = (
+        breakdown.get("estimated_salary")
+        or job.salary_text
+        or (
+            f"${job.salary_min:,.0f} – ${job.salary_max:,.0f}"
+            if job.salary_min and job.salary_max
+            else job.salary_text or "Not listed"
+        )
+    )
+    match_score = float(breakdown.get("match_score") or breakdown.get("match_percentage") or job.score or 0)
+    return JobOut(
+        id=job.id,
+        external_id=job.external_id,
+        source=job.source,
+        source_display=str(breakdown.get("source_display") or source_display(job.source)),
+        company=job.company,
+        title=job.title,
+        location=job.location,
+        is_remote=bool(job.is_remote) and bool(verification.get("verified")),
+        remote_verified=bool(verification.get("verified")),
+        remote_verified_label=str(verification.get("label") or "✗ Not Verified Remote"),
+        salary_text=job.salary_text,
+        salary_min=job.salary_min,
+        salary_max=job.salary_max,
+        url=job.url,
+        posting_url=job.url,
+        careers_url=str(careers or ""),
+        description=job.description,
+        tags=job.tags,
+        level_hint=job.level_hint,
+        score=job.score,
+        match_score=match_score,
+        match_percentage=match_score,
+        interview_probability=None,
+        estimated_salary=str(est),
+        why_match=str(breakdown.get("why_match") or ""),
+        score_breakdown=breakdown,
+        matched_projects=projects,
+        found_at=job.found_at,
+        date_found=job.found_at.isoformat() + "Z" if job.found_at else "",
+        last_verified_at=active.get("checked_at"),
+        is_active=bool(active.get("active", True)) if active else True,
+        package_ready=package_ready,
+        posted_at=job.posted_at,
+        status=job.status,
+        rank=rank,
+        is_top_10=is_top_10,
+    )
+
+
+
+def _app_out(row: Application) -> ApplicationOut:
+    try:
+        prep = json.loads(getattr(row, "interview_prep", None) or "{}")
+    except json.JSONDecodeError:
+        prep = {}
+    ip = float(row.application_score or 0)
+    return ApplicationOut(
+        id=row.id,
+        job_id=row.job_id,
+        company=row.company,
+        position=row.position,
+        salary=row.salary,
+        location=row.location,
+        date_applied=row.date_applied,
+        status=row.status,
+        stage_label=stage_label(row.status),
+        follow_up_date=row.follow_up_date,
+        interview_date=row.interview_date,
+        notes=row.notes,
+        recruiter_name=row.recruiter_name,
+        recruiter_email=row.recruiter_email,
+        tailored_resume=row.tailored_resume,
+        cover_letter=row.cover_letter,
+        interview_prep=prep if isinstance(prep, dict) else {},
+        portfolio_refs=json.loads(row.portfolio_refs or "[]"),
+        application_score=row.application_score,
+        interview_probability=ip,
+        portfolio_url=PORTFOLIO_URL,
+        approval_required=row.status in {"saved", "ready"},
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+@router.post("/jobs/search")
+async def api_search_jobs(
+    persist: bool = True,
+    strict_level: bool = True,
+    fully_remote_only: bool = True,
+    us_only: bool = True,
+    min_salary: float = Query(60000, ge=0),
+    prefer_no_degree: bool = True,
+    block_five_plus_years: bool = True,
+    require_salary_listed: bool = False,
+    verify_active: bool = True,
+    quick_filters: str = Query("", description="Comma-separated quick filter labels"),
+    db: Session = Depends(get_db),
+):
+    from app.services.job_finder import purge_placeholders
+
+    qf = [x.strip() for x in quick_filters.split(",") if x.strip()]
+    purged = purge_placeholders(db)
+    result = await search_jobs(
+        strict_level=strict_level,
+        fully_remote_only=fully_remote_only,
+        us_only=us_only,
+        min_salary=min_salary,
+        prefer_no_degree=prefer_no_degree,
+        block_five_plus_years=block_five_plus_years,
+        quick_filters=qf or None,
+        require_salary_listed=require_salary_listed,
+        verify_active=verify_active,
+    )
+    added = 0
+    remote_purged = 0
+    if persist:
+        remote_purged = purge_unverified_remote(db)
+        added = upsert_jobs(db, result["jobs"])
+    top = result["jobs"][:10]
+    return {
+        "fetched": result["fetched"],
+        "matched": result["matched"],
+        "added": added,
+        "purged_placeholders": purged,
+        "purged_unverified_remote": remote_purged,
+        "rejected_unverified_remote": result.get("rejected_unverified_remote", 0),
+        "rejected_inactive": result.get("rejected_inactive", 0),
+        "rejected_placeholder": result.get("rejected_placeholder", 0),
+        "errors": result["errors"],
+        "sources_note": result["sources_note"],
+        "ranking_mode": result.get("ranking_mode"),
+        "remote_mode": result.get("remote_mode"),
+        "production_mode": True,
+        "refreshed_at": result.get("refreshed_at"),
+        "weights": result.get("weights"),
+        "filters_applied": result.get("filters_applied"),
+        "top_10": top,
+        "jobs": result["jobs"][:100],
+        "auto_apply": False,
+    }
+
+
+
+@router.get("/jobs", response_model=list[JobOut])
+def list_jobs(
+    q: str = "",
+    min_score: float = Query(0, ge=0, le=100),
+    status: str = "",
+    quick_filters: str = "",
+    verified_remote_only: bool = True,
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    from app.services.filters import matches_quick_filters, verify_remote
+
+    query = db.query(Job).filter(
+        ~Job.status.in_(
+            ["hidden-unverified-remote", "hidden-placeholder", "hidden-inactive"]
+        )
+    )
+    if status:
+        query = query.filter(Job.status == status)
+    if min_score:
+        query = query.filter(Job.score >= min_score)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Job.title.ilike(like)) | (Job.company.ilike(like)) | (Job.tags.ilike(like))
+        )
+    rows = query.order_by(Job.score.desc(), Job.found_at.desc()).limit(limit * 4).all()
+    qf = [x.strip() for x in quick_filters.split(",") if x.strip()]
+    ready_ids = {
+        a.job_id
+        for a in db.query(Application).filter(Application.status.in_(["ready", "applied"])).all()
+        if a.job_id
+    }
+    out: list[JobOut] = []
+    from app.services.production import is_placeholder_company, is_production_eligible
+
+    for r in rows:
+        if is_placeholder_company(r.company):
+            continue
+        job_dict = {
+            "title": r.title,
+            "company": r.company,
+            "location": r.location,
+            "description": r.description,
+            "tags": r.tags,
+            "is_remote": bool(r.is_remote),
+            "source": r.source,
+            "url": r.url,
+        }
+        if not is_production_eligible(job_dict)[0]:
+            continue
+        if verified_remote_only and not verify_remote(job_dict)["verified"]:
+            continue
+        if qf and not matches_quick_filters(job_dict, qf):
+            continue
+        out.append(_job_out(r, package_ready=r.id in ready_ids))
+        if len(out) >= limit * 2:
+            break
+    # Production: rank by transparent Match Score
+    out.sort(key=lambda j: (j.match_score, j.match_percentage), reverse=True)
+    ranked: list[JobOut] = []
+    for i, j in enumerate(out[:limit]):
+        j.rank = i + 1 if i < 10 else None
+        j.is_top_10 = i < 10
+        ranked.append(j)
+    return ranked
+
+
+@router.get("/jobs/{job_id}", response_model=JobOut)
+def get_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return _job_out(job)
+
+
+@router.post("/jobs/manual", response_model=JobOut)
+def manual_job(payload: ManualJobIn, db: Session = Depends(get_db)):
+    from app.services.production import is_placeholder_company, is_production_eligible
+
+    if is_placeholder_company(payload.company):
+        raise HTTPException(400, "Placeholder / demo companies are blocked in Production Mode.")
+    job_dict = {
+        "external_id": f"manual-{datetime.utcnow().timestamp()}",
+        "source": payload.source or "manual",
+        "company": payload.company,
+        "title": payload.title,
+        "location": payload.location,
+        "url": payload.url,
+        "description": payload.description,
+        "salary_text": payload.salary_text,
+        "is_remote": True,
+        "tags": [],
+    }
+    ok, reason = is_production_eligible(job_dict)
+    if not ok:
+        raise HTTPException(400, f"Job rejected ({reason}). Provide a real company and official posting URL.")
+    from app.services.filters import parse_salary
+
+    smin, smax = parse_salary(payload.salary_text)
+    job_dict["salary_min"] = smin
+    job_dict["salary_max"] = smax
+    job_dict["level_hint"] = level_hint(job_dict)
+    score, breakdown = score_job(job_dict)
+    projects = match_portfolio(job_dict)
+    from app.services.filters import format_estimated_salary, match_reason
+
+    why = match_reason(job_dict, projects)
+    breakdown["why_match"] = why
+    breakdown["estimated_salary"] = format_estimated_salary(job_dict)
+    breakdown["portfolio_to_cite"] = [p.get("name") for p in projects[:4]]
+    row = Job(
+        external_id=job_dict["external_id"],
+        source=job_dict["source"],
+        company=payload.company,
+        title=payload.title,
+        location=payload.location,
+        is_remote=1,
+        salary_text=payload.salary_text,
+        salary_min=smin,
+        salary_max=smax,
+        url=payload.url,
+        description=payload.description,
+        tags="",
+        level_hint=job_dict["level_hint"],
+        score=score,
+        score_breakdown=json.dumps(breakdown),
+        matched_projects=json.dumps(projects),
+        status="new",
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _job_out(row)
+
+
+@router.post("/jobs/{job_id}/generate", response_model=GenerateOut)
+def generate_packet(job_id: int, db: Session = Depends(get_db)):
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    from app.services.filters import format_estimated_salary, match_reason
+
+    job_dict = {
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "description": job.description,
+        "salary_text": job.salary_text,
+        "salary_min": job.salary_min,
+        "salary_max": job.salary_max,
+        "is_remote": bool(job.is_remote),
+        "tags": job.tags,
+        "source": job.source,
+    }
+    projects = match_portfolio(job_dict)
+    score, breakdown = score_job(job_dict)
+    why = match_reason(job_dict, projects)
+    breakdown["why_match"] = why
+    breakdown["estimated_salary"] = format_estimated_salary(job_dict)
+    resume, resume_ai, resume_warn = tailor_resume(job_dict, projects)
+    cover, cover_ai, cover_warn = generate_cover_letter(job_dict, projects)
+    job.score = score
+    job.score_breakdown = json.dumps(breakdown)
+    job.matched_projects = json.dumps(projects)
+    db.commit()
+    return GenerateOut(
+        job_id=job.id,
+        score=score,
+        score_breakdown=breakdown,
+        matched_projects=projects,
+        tailored_resume=resume,
+        cover_letter=cover,
+        why_match=why,
+        interview_probability=float(breakdown.get("interview_probability") or 0),
+        used_ai=resume_ai or cover_ai,
+        truth_warnings=list(dict.fromkeys(resume_warn + cover_warn)),
+        auto_apply=False,
+        approval_required=True,
+    )
+
+
+@router.get("/applications", response_model=list[ApplicationOut])
+def list_applications(db: Session = Depends(get_db)):
+    rows = db.query(Application).order_by(Application.updated_at.desc()).all()
+    return [_app_out(r) for r in rows]
+
+
+@router.post("/applications", response_model=ApplicationOut)
+def create_application(payload: ApplicationIn, db: Session = Depends(get_db)):
+    row = Application(
+        job_id=payload.job_id or 0,
+        company=payload.company,
+        position=payload.position,
+        salary=payload.salary,
+        location=payload.location,
+        date_applied=payload.date_applied,
+        status=payload.status,
+        follow_up_date=payload.follow_up_date,
+        interview_date=payload.interview_date,
+        notes=payload.notes,
+        recruiter_name=payload.recruiter_name,
+        recruiter_email=payload.recruiter_email,
+        tailored_resume=payload.tailored_resume,
+        cover_letter=payload.cover_letter,
+        portfolio_refs=json.dumps(payload.portfolio_refs),
+        application_score=payload.application_score,
+    )
+    db.add(row)
+    if payload.job_id:
+        job = db.get(Job, payload.job_id)
+        if job:
+            job.status = payload.status if payload.status != "saved" else "tracking"
+    db.commit()
+    db.refresh(row)
+    return _app_out(row)
+
+
+@router.patch("/applications/{app_id}", response_model=ApplicationOut)
+def update_application(app_id: int, payload: ApplicationUpdate, db: Session = Depends(get_db)):
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    data = payload.model_dump(exclude_unset=True)
+    if "portfolio_refs" in data and data["portfolio_refs"] is not None:
+        data["portfolio_refs"] = json.dumps(data["portfolio_refs"])
+    if "interview_prep" in data and data["interview_prep"] is not None:
+        data["interview_prep"] = json.dumps(data["interview_prep"])
+    if "status" in data and data["status"] == "applied" and row.status != "applied":
+        raise HTTPException(
+            400,
+            "Use POST /api/applications/{id}/approve to mark Applied. Auto-apply is disabled.",
+        )
+    if "status" in data and data["status"] not in PIPELINE_STAGES:
+        raise HTTPException(400, f"Invalid stage. Use one of: {', '.join(PIPELINE_STAGES)}")
+    for k, v in data.items():
+        setattr(row, k, v)
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return _app_out(row)
+
+
+@router.post("/applications/from-job/{job_id}", response_model=ApplicationOut)
+def track_from_job(job_id: int, status: str = "ready", db: Session = Depends(get_db)):
+    """Create tracker entry. Default status is 'ready' — never auto-applies."""
+    if status == "applied":
+        raise HTTPException(
+            400,
+            "Cannot auto-apply. Create as 'ready' or 'saved', then POST /api/applications/{id}/approve.",
+        )
+    if status not in PIPELINE_STAGES:
+        raise HTTPException(400, f"Invalid stage. Use one of: {', '.join(PIPELINE_STAGES)}")
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    gen = generate_packet(job_id, db)
+    row = Application(
+        job_id=job.id,
+        company=job.company,
+        position=job.title,
+        salary=job.salary_text,
+        location=job.location,
+        date_applied=None,
+        status=status if status != "applied" else "ready",
+        tailored_resume=gen.tailored_resume,
+        cover_letter=gen.cover_letter,
+        portfolio_refs=json.dumps(gen.matched_projects),
+        application_score=gen.score,
+        notes="Created from Interview Pipeline. Awaiting Leroy approval to apply. Auto-apply: OFF.",
+    )
+    job.status = row.status
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _app_out(row)
+
+
+@router.get("/dashboard", response_model=DashboardOut)
+def dashboard(db: Session = Depends(get_db)):
+    today = date.today()
+    start = datetime(today.year, today.month, today.day)
+    new_jobs_today = db.query(Job).filter(Job.found_at >= start).count()
+    apps = db.query(Application).all()
+    applications_ready = sum(1 for a in apps if a.status == "ready")
+    applications_sent = sum(
+        1
+        for a in apps
+        if a.status
+        in {
+            "applied",
+            "recruiter_contact",
+            "first_interview",
+            "technical_interview",
+            "final_interview",
+            "offer",
+        }
+    )
+    interviews_scheduled = sum(
+        1
+        for a in apps
+        if a.interview_date
+        or a.status in {"first_interview", "technical_interview", "final_interview", "recruiter_contact"}
+    )
+    interviews = interviews_scheduled
+    follow_ups_due = sum(
+        1
+        for a in apps
+        if a.follow_up_date and a.follow_up_date <= today and a.status not in {"rejected", "offer"}
+    )
+
+    from app.services.interview_pipeline import (
+        highest_probability_this_week,
+        rank_jobs_by_interview_probability,
+    )
+    from app.services.job_finder import read_last_refresh
+
+    best = rank_jobs_by_interview_probability(db, limit=10)
+    ready_ids = {
+        a.job_id
+        for a in db.query(Application).filter(Application.status.in_(["ready", "applied"])).all()
+        if a.job_id
+    }
+    recent = db.query(Application).order_by(Application.updated_at.desc()).limit(10).all()
+    status_counts: dict[str, int] = {}
+    for a in apps:
+        status_counts[a.status] = status_counts.get(a.status, 0) + 1
+
+    highest = highest_probability_this_week(db)
+    highest_out = HighestInterviewOut(**highest) if highest else None
+    last = read_last_refresh()
+
+    return DashboardOut(
+        new_jobs_today=new_jobs_today,
+        applications_ready=applications_ready,
+        applications_sent=applications_sent,
+        interviews_scheduled=interviews_scheduled,
+        interviews=interviews,
+        follow_ups_due=follow_ups_due,
+        highest_probability_interview_this_week=highest_out,
+        best_new_opportunities=[
+            _job_out(j, rank=i + 1, is_top_10=True, package_ready=j.id in ready_ids)
+            for i, j in enumerate(best)
+        ],
+        recent_applications=[_app_out(a) for a in recent],
+        status_counts=status_counts,
+        auto_apply=False,
+        mode="production",
+        last_refresh=last,
+        refreshed_at=(last or {}).get("refreshed_at"),
+    )
+
+
+@router.get("/profile")
+def profile():
+    from app.services.filters import load_portfolio, load_profile
+
+    return {"profile": load_profile(), "portfolio": load_portfolio()}
+
+
+@router.get("/pipeline/stages")
+def pipeline_stages():
+    return {"stages": PIPELINE_STAGES, "labels": {s: stage_label(s) for s in PIPELINE_STAGES}, "auto_apply": False}
+
+
+@router.post("/pipeline/morning-refresh")
+async def api_morning_refresh(
+    prepare_packets: bool = True,
+    db: Session = Depends(get_db),
+):
+    from app.services.interview_pipeline import morning_refresh
+
+    return await morning_refresh(db, prepare_packets=prepare_packets)
+
+
+@router.post("/pipeline/prepare-top10")
+def api_prepare_top10(db: Session = Depends(get_db)):
+    from app.services.interview_pipeline import prepare_top_packets
+
+    packets = prepare_top_packets(db, limit=10)
+    return {"prepared": len(packets), "auto_apply": False, "packets": packets}
+
+
+@router.post("/jobs/{job_id}/interview-prep", response_model=InterviewPrepOut)
+def api_interview_prep(job_id: int, db: Session = Depends(get_db)):
+    from app.services.filters import match_reason
+    from app.services.interview_prep import build_interview_prep, render_prep_markdown
+    from app.services.packet_store import save_packet_locally
+
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    job_dict = {
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "description": job.description,
+        "salary_text": job.salary_text,
+        "salary_min": job.salary_min,
+        "salary_max": job.salary_max,
+        "tags": job.tags,
+        "source": job.source,
+    }
+    projects = match_portfolio(job_dict)
+    why = match_reason(job_dict, projects)
+    gen = generate_packet(job_id, db)
+    prep = build_interview_prep(job_dict, projects, why_match=why)
+    paths = save_packet_locally(
+        job_id=job.id,
+        company=job.company,
+        title=job.title,
+        resume=gen.tailored_resume,
+        cover=gen.cover_letter,
+        prep=prep,
+        projects=projects,
+        why_match=why,
+        interview_probability=gen.interview_probability,
+        match_percentage=gen.score,
+        estimated_salary=str((gen.score_breakdown or {}).get("estimated_salary") or job.salary_text or "Not listed"),
+        status="ready",
+    )
+    app = (
+        db.query(Application)
+        .filter(Application.job_id == job.id)
+        .order_by(Application.updated_at.desc())
+        .first()
+    )
+    if app:
+        app.interview_prep = json.dumps(prep)
+        app.tailored_resume = gen.tailored_resume
+        app.cover_letter = gen.cover_letter
+        app.portfolio_refs = json.dumps(projects)
+        if app.status in {"saved", ""}:
+            app.status = "ready"
+        app.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(app)
+    return InterviewPrepOut(
+        job_id=job.id,
+        application_id=app.id if app else None,
+        company=job.company,
+        title=job.title,
+        prep=prep,
+        prep_markdown=render_prep_markdown(prep, job_dict),
+        packet_paths=paths,
+        auto_apply=False,
+    )
+
+
+@router.post("/applications/{app_id}/approve", response_model=ApplicationOut)
+def approve_apply(app_id: int, db: Session = Depends(get_db)):
+    """Leroy's explicit approval — the only way to mark Applied."""
+    from app.services.interview_pipeline import approve_application
+
+    try:
+        row = approve_application(db, app_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _app_out(row)
+
+
+@router.get("/applications/{app_id}/export", response_model=ExportOut)
+def export_application(app_id: int, db: Session = Depends(get_db)):
+    from app.services.packet_store import export_bundle_files
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    bundle = export_bundle_files(
+        resume=row.tailored_resume or "# Resume not generated yet",
+        cover=row.cover_letter or "# Cover letter not generated yet",
+        portfolio_url=PORTFOLIO_URL,
+        company=row.company,
+        title=row.position,
+    )
+    return ExportOut(application_id=row.id, job_id=row.job_id, **bundle)
+
+
+@router.get("/jobs/{job_id}/export", response_model=ExportOut)
+def export_job(job_id: int, db: Session = Depends(get_db)):
+    from app.services.packet_store import export_bundle_files
+
+    gen = generate_packet(job_id, db)
+    job = db.get(Job, job_id)
+    bundle = export_bundle_files(
+        resume=gen.tailored_resume,
+        cover=gen.cover_letter,
+        portfolio_url=PORTFOLIO_URL,
+        company=job.company if job else "company",
+        title=job.title if job else "role",
+    )
+    return ExportOut(job_id=job_id, **bundle)

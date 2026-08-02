@@ -1,0 +1,79 @@
+{
+  "candidate": {
+    "full_name": "Leroy Garvin Jr",
+    "location": "Savannah, Georgia, USA",
+    "open_to": "Remote",
+    "phone": "(912) 901-6378",
+    "email": "AlignedVibesCo@gmail.com",
+    "linkedin": "https://www.linkedin.com/in/leroy-garvin-49443b423/",
+    "portfolio": "https://leroy-garvin-ai-portfolio.vercel.app",
+    "etsy": "https://alignedvibesco.etsy.com",
+    "positioning": "AI Automation | AI Operations | Workflow Automation",
+    "current_title": "Owner & AI Operations Specialist",
+    "current_employer": "Right Outside Auto Detailing LLC",
+    "employment_start": null,
+    "education": [],
+    "certifications": []
+  },
+  "target_roles": [
+    "AI Operations Specialist",
+    "Workflow Automation Specialist",
+    "AI Implementation Specialist",
+    "AI Support Specialist",
+    "Technical Support Specialist",
+    "Conversational AI QA",
+    "No-Code / Low-Code Automation Specialist",
+    "Remote Operations Specialist",
+    "Solutions Engineer",
+    "Customer Success Engineer"
+  ],
+  "skills": [
+    "AI Workflow Design",
+    "Prompt Engineering",
+    "Conversational AI Testing",
+    "AI Quality Assurance",
+    "Root Cause Analysis",
+    "Process Documentation",
+    "Workflow Automation",
+    "No-Code Automation (n8n, Airtable)",
+    "Business Rules Design",
+    "Troubleshooting",
+    "Technical Support",
+    "Customer Operations",
+    "Continuous Improvement"
+  ],
+  "tools": [
+    "ChatGPT",
+    "Claude",
+    "n8n",
+    "Airtable",
+    "OpenAI",
+    "Etsy API",
+    "Twilio",
+    "Cursor",
+    "Next.js",
+    "TypeScript"
+  ],
+  "forbidden_claims": [
+    "senior engineer",
+    "years of professional software engineering",
+    "led a team of engineers",
+    "PhD",
+    "Master's degree",
+    "Bachelor's degree",
+    "certified AWS",
+    "revenue figures",
+    "customer count metrics not in evidence",
+    "production call volume",
+    "sales volume",
+    "finished commercial LawOne product"
+  ],
+  "truth_rules": [
+    "Never invent employers, degrees, certifications, revenue, customer counts, or years of technical experience.",
+    "Never claim senior engineering experience.",
+    "LawOne AI is in development — not a finished commercial product; not legal advice; no live LLM/Auth claims.",
+    "Harbor/Etsy sales volume must not be claimed.",
+    "Voice booking improvements are qualitative unless portfolio evidence says otherwise.",
+    "Only emphasize projects and skills listed in this profile and master resume."
+  ]
+}

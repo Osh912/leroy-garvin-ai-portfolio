@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ghx",
+    "name": "GH-X Automation System",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/ghx.html",
+    "keywords": ["automation", "n8n", "workflow", "etsy", "airtable", "openai", "pipeline", "operations", "product ops", "implementation"],
+    "blurb": "23 n8n workflows across an 8-stage digital-product pipeline with Airtable queues and marketplace packaging outputs.",
+    "metrics": ["23 workflows", "8 stages", "marketplace-ready product packages"]
+  },
+  {
+    "id": "voice",
+    "name": "AI Voice Booking Assistant",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/voice.html",
+    "keywords": ["voice", "conversational", "booking", "prompt", "qa", "support", "customer", "chatbot", "assistant", "technical support"],
+    "blurb": "10-stage AI booking conversation with prompt controls, confirmation checkpoints, and structured QA for a real service business.",
+    "metrics": ["10 stages", "5+ failure classes addressed in QA"]
+  },
+  {
+    "id": "n8n",
+    "name": "n8n Workflow Automation",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/n8n.html",
+    "keywords": ["n8n", "orchestration", "api", "error handling", "automation", "integration", "workflow"],
+    "blurb": "Orchestration patterns for queues, API calls, branching, and error handling across GH-X stages.",
+    "metrics": ["23 workflows inventoried"]
+  },
+  {
+    "id": "airtable",
+    "name": "Airtable Systems",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/airtable.html",
+    "keywords": ["airtable", "database", "crm", "queue", "status", "ops", "no-code", "low-code"],
+    "blurb": "Five operational tables for product queues, stage status, and QA visibility behind the automation pipeline.",
+    "metrics": ["5 documented tables"]
+  },
+  {
+    "id": "lawone",
+    "name": "LawOne AI",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/lawone.html",
+    "keywords": ["legal", "research", "next.js", "typescript", "platform", "search", "implementation", "product"],
+    "blurb": "Legal-information research platform foundation (in development): phases A–H documented, labeled demo data — not a finished commercial product.",
+    "metrics": ["Phases A–H documented", "In development"]
+  },
+  {
+    "id": "harbor",
+    "name": "Harbor & Home Moving Binder",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/harbor.html",
+    "keywords": ["product", "marketplace", "etsy", "packaging", "listing", "ops", "customer success"],
+    "blurb": "66-page READY_TO_SELL relocation planner package with listing creatives and 8 marketing videos.",
+    "metrics": ["66 pages", "8 videos"]
+  },
+  {
+    "id": "qa",
+    "name": "Technical Documentation & QA",
+    "url": "https://leroy-garvin-ai-portfolio.vercel.app/projects/qa.html",
+    "keywords": ["qa", "quality", "documentation", "testing", "support", "evaluation", "annotation"],
+    "blurb": "Seven-step QA loop: define expected behavior, test, classify, root-cause, fix, retest, document.",
+    "metrics": ["7-step QA loop"]
+  }
+]

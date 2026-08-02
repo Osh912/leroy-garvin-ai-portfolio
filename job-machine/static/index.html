@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interview Pipeline — Leroy Garvin Jr</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>Interview Pipeline</strong>
+      <span>Production · Verified live jobs only · Never auto-applies</span>
+    </div>
+    <nav class="tabs" aria-label="Primary">
+      <button type="button" class="tab active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="tab" data-view="pipeline">Top 10 Packets</button>
+      <button type="button" class="tab" data-view="tracker">Interview Tracker</button>
+      <button type="button" class="tab" data-view="jobs">Job Finder</button>
+      <button type="button" class="tab" data-view="import">Import JD</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-dashboard" class="view active">
+      <div class="section-head row">
+        <div>
+          <h1>Interview Dashboard</h1>
+          <p>Live verified jobs · Transparent Match Score · No placeholders · No invented interview %</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-morning">Morning Refresh</button>
+          <button type="button" class="btn" id="btn-prepare-top10">Prepare Top 10 Packets</button>
+        </div>
+      </div>
+      <p class="note refresh-line" id="last-refresh">Last refresh: —</p>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div id="highest-interview" class="highest-band"></div>
+      <div class="weights-bar" aria-label="Focus roles">
+        <span>AI Operations</span>
+        <span>Workflow Automation</span>
+        <span>Technical Support</span>
+        <span>Solutions Engineer</span>
+        <span>Customer Success Engineer</span>
+        <span>AI Implementation</span>
+        <span>Automation Specialist</span>
+      </div>
+      <div class="split">
+        <div>
+          <h2>Highest Match Score (Top 10)</h2>
+          <div id="best-jobs" class="card-list"></div>
+        </div>
+        <div>
+          <h2>Tracker activity</h2>
+          <div id="recent-apps" class="card-list"></div>
+        </div>
+      </div>
+      <p class="note" id="pipeline-note">Auto-apply is off. Packets save under <code>data/interview_packets/</code>.</p>
+    </section>
+
+    <section id="view-pipeline" class="view">
+      <div class="section-head">
+        <h1>Top 10 Application Packets</h1>
+        <p>Custom resume · Cover letter · Portfolio match · Why fit · Interview prep</p>
+      </div>
+      <div id="packets-list" class="card-list"></div>
+    </section>
+
+    <section id="view-tracker" class="view">
+      <div class="section-head">
+        <h1>Interview Tracker</h1>
+        <p>Saved → Ready → Applied → Recruiter Contact → First → Technical → Final → Offer / Rejected</p>
+      </div>
+      <div class="table-wrap">
+        <table id="tracker-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Position</th>
+              <th>Salary</th>
+              <th>Stage</th>
+              <th>Interview</th>
+              <th>Follow-up</th>
+              <th>IP / Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-jobs" class="view">
+      <div class="section-head row">
+        <div>
+          <h1>Job Finder</h1>
+          <p>Strict Remote · Ranked for interviews · US · Entry/Junior/Associate</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-search">Search Jobs</button>
+        </div>
+      </div>
+      <div class="filters-panel">
+        <h3>Filters</h3>
+        <div class="filter-grid">
+          <label class="check"><input type="checkbox" id="flt-remote" checked> ✓ Fully Remote only</label>
+          <label class="check"><input type="checkbox" id="flt-us" checked> ✓ US Remote</label>
+          <label class="field">✓ Salary minimum
+            <input type="number" id="flt-min-salary" min="0" step="1000" value="60000">
+          </label>
+        </div>
+        <h3>Role / skill filters</h3>
+        <div class="quick-filters" id="quick-filters"></div>
+      </div>
+      <p class="note" id="search-note">Production Mode: no placeholders, active URL check, transparent Match Score.</p>
+      <div class="toolbar">
+        <input type="search" id="job-q" placeholder="Filter by title, company, tags">
+        <input type="number" id="min-score" min="0" max="100" value="40" title="Min match %">
+        <button type="button" class="btn" id="btn-refresh-jobs">Refresh</button>
+      </div>
+      <div id="jobs-list" class="card-list"></div>
+    </section>
+
+    <section id="view-import" class="view">
+      <div class="section-head">
+        <h1>Import JD</h1>
+        <p>Paste LinkedIn / Indeed / Wellfound / Otta listings. No auto-apply.</p>
+      </div>
+      <form id="import-form" class="import-form">
+        <label>Company <input name="company" required></label>
+        <label>Title <input name="title" required></label>
+        <label>Location <input name="location" value="Remote - United States"></label>
+        <label>URL <input name="url" type="url" placeholder="https://"></label>
+        <label>Salary text <input name="salary_text" placeholder="$70,000 – $90,000"></label>
+        <label class="full">Job description
+          <textarea name="description" rows="10" required></textarea>
+        </label>
+        <div class="full actions">
+          <button type="submit" class="btn primary">Score &amp; Save Job</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="detail-dialog">
+    <div class="dialog-head">
+      <h2 id="detail-title">Packet</h2>
+      <button type="button" class="btn" onclick="document.getElementById('detail-dialog').close()">Close</button>
+    </div>
+    <div id="detail-body"></div>
+  </dialog>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
