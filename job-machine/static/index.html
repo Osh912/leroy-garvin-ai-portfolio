@@ -14,6 +14,7 @@
     </div>
     <nav class="tabs" aria-label="Primary">
       <button type="button" class="tab active" data-view="dashboard">Dashboard</button>
+      <button type="button" class="tab" data-view="career">AI Career Agent</button>
       <button type="button" class="tab" data-view="assistant">Application Assistant</button>
       <button type="button" class="tab" data-view="analytics">Recruiter Analytics</button>
       <button type="button" class="tab" data-view="pipeline">Top 10 Packets</button>
@@ -58,6 +59,77 @@
         </div>
       </div>
       <p class="note" id="pipeline-note">Auto-apply is off. Packets save under <code>data/interview_packets/</code>.</p>
+    </section>
+
+    <section id="view-career" class="view">
+      <div class="section-head row">
+        <div>
+          <h1>AI Career Agent</h1>
+          <p>Daily Brief · Coach · Recruiter CRM · Interview Intelligence · Runs 8:00 AM · Never auto-submits or emails</p>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-career-run">Run Morning Agent</button>
+          <button type="button" class="btn" id="btn-career-brief">Refresh Brief</button>
+          <button type="button" class="btn" id="btn-career-weekly">Weekly Report</button>
+        </div>
+      </div>
+      <p class="note" id="career-meta">Local agent · Notify ≥ 80% Match Score · Approval required for apply/outreach</p>
+      <div class="assistant-subnav" role="tablist" aria-label="Career agent sections">
+        <button type="button" class="chip active" data-career-panel="brief">Daily Brief</button>
+        <button type="button" class="chip" data-career-panel="coach">Career Coach</button>
+        <button type="button" class="chip" data-career-panel="crm">Recruiter CRM</button>
+        <button type="button" class="chip" data-career-panel="intel">Interview Intelligence</button>
+      </div>
+
+      <div id="career-panel-brief" class="assistant-panel active">
+        <div id="career-notifications" class="card-list"></div>
+        <div class="stat-grid dense" id="career-brief-stats"></div>
+        <div class="split analytics-split">
+          <div>
+            <h2>Best opportunities</h2>
+            <div id="career-best" class="card-list"></div>
+          </div>
+          <div>
+            <h2>Brief details</h2>
+            <div id="career-brief-details" class="metric-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="career-panel-coach" class="assistant-panel">
+        <div id="career-coach" class="metric-panel"></div>
+        <h2>Weekly improvement actions</h2>
+        <ul class="insight-list" id="career-weekly-actions"></ul>
+      </div>
+
+      <div id="career-panel-crm" class="assistant-panel">
+        <div class="actions" style="margin-bottom:0.75rem">
+          <button type="button" class="btn" id="btn-crm-import">Import from Applications</button>
+        </div>
+        <form id="crm-form" class="import-form notes-form">
+          <label>Recruiter <input name="recruiter_name" required></label>
+          <label>Company <input name="company" required></label>
+          <label>Email <input name="email" type="email"></label>
+          <label>Phone <input name="phone"></label>
+          <label>LinkedIn <input name="linkedin" type="url"></label>
+          <label>Last contact <input name="last_contact" type="date"></label>
+          <label>Follow-up <input name="follow_up_date" type="date"></label>
+          <label class="full">Notes <textarea name="notes" rows="2"></textarea></label>
+          <label class="full">Referral opportunities <textarea name="referral_opportunities" rows="2"></textarea></label>
+          <div class="full actions"><button type="submit" class="btn primary">Save Contact</button></div>
+        </form>
+        <div id="crm-list" class="card-list"></div>
+      </div>
+
+      <div id="career-panel-intel" class="assistant-panel">
+        <form id="intel-form" class="import-form notes-form">
+          <label>Application ID <input name="application_id" type="number" min="1"></label>
+          <label>Or Job ID <input name="job_id" type="number" min="1"></label>
+          <div class="full actions"><button type="submit" class="btn primary">Generate Interview Intelligence</button></div>
+        </form>
+        <p class="note">Uses posting text + verified portfolio/profile only. Financials/news unavailable unless in the posting.</p>
+        <div id="intel-body" class="metric-panel"></div>
+      </div>
     </section>
 
     <section id="view-assistant" class="view">

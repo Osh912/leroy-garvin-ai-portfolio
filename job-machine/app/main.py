@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import SessionLocal, init_db
 from app.routers.api import router as api_router
+from app.routers.career_agent_api import router as career_agent_router
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
@@ -41,8 +42,8 @@ _refresh_task: asyncio.Task | None = None
 
 
 async def _morning_loop() -> None:
-    """Every morning (~8:00 local) refresh remote jobs and prepare Top 10 packets."""
-    from app.services.interview_pipeline import morning_refresh
+    """Every morning (~8:00 local) run AI Career Agent (uses existing morning_refresh + Daily Brief)."""
+    from app.services.career_agent import run_career_agent_morning
 
     last_run_date = None
     while True:
@@ -52,18 +53,23 @@ async def _morning_loop() -> None:
             if now.time() >= target and last_run_date != now.date():
                 db = SessionLocal()
                 try:
-                    log = await morning_refresh(db, prepare_packets=True)
+                    # Additive orchestration: existing search/score/packets + Daily Brief.
+                    # morning_refresh internals unchanged; still never auto-applies.
+                    result = await run_career_agent_morning(db, prepare_packets=True)
+                    refresh = result.get("refresh") or {}
+                    brief = result.get("brief") or {}
                     logger.info(
-                        "Morning refresh complete: fetched=%s matched=%s packets=%s",
-                        log.get("fetched"),
-                        log.get("matched"),
-                        log.get("packets_prepared"),
+                        "Career Agent morning run: fetched=%s matched=%s packets=%s high_score_alerts=%s",
+                        refresh.get("fetched"),
+                        refresh.get("matched"),
+                        refresh.get("packets_prepared"),
+                        len((brief.get("notifications") or [])),
                     )
                     last_run_date = now.date()
                 finally:
                     db.close()
         except Exception:  # noqa: BLE001
-            logger.exception("Morning refresh failed")
+            logger.exception("Career Agent morning run failed")
         await asyncio.sleep(60 * 15)  # check every 15 minutes
 
 
@@ -72,6 +78,8 @@ async def on_startup() -> None:
     global _refresh_task
     (ROOT / "data").mkdir(parents=True, exist_ok=True)
     (ROOT / "data" / "interview_packets").mkdir(parents=True, exist_ok=True)
+    (ROOT / "data" / "daily_briefs").mkdir(parents=True, exist_ok=True)
+    (ROOT / "data" / "weekly_reports").mkdir(parents=True, exist_ok=True)
     init_db()
     _refresh_task = asyncio.create_task(_morning_loop())
 
@@ -88,6 +96,7 @@ async def on_shutdown() -> None:
 
 
 app.include_router(api_router)
+app.include_router(career_agent_router)
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 if EXTENSION_FIXTURES.exists():
     app.mount("/fixtures", StaticFiles(directory=str(EXTENSION_FIXTURES)), name="fixtures")

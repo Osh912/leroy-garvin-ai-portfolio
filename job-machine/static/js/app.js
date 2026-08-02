@@ -899,8 +899,217 @@
       if (tab.dataset.view === "assistant") loadAssistant().catch((err) => {
         $("#assistant-meta").textContent = String(err.message || err);
       });
+      if (tab.dataset.view === "career") loadCareerAgent().catch((err) => {
+        $("#career-meta").textContent = String(err.message || err);
+      });
     })
   );
+
+  function switchCareerPanel(name) {
+    $$("[data-career-panel]").forEach((c) =>
+      c.classList.toggle("active", c.dataset.careerPanel === name)
+    );
+    $$("#view-career .assistant-panel").forEach((p) =>
+      p.classList.toggle("active", p.id === `career-panel-${name}`)
+    );
+  }
+
+  async function loadCareerAgent() {
+    const status = await api("/api/career-agent/status");
+    const brief = await api("/api/career-agent/daily-brief");
+    const coach = await api("/api/career-agent/coach");
+    const weekly = await api("/api/career-agent/coach/weekly-report");
+    const crm = await api("/api/career-agent/crm");
+    $("#career-meta").textContent =
+      `Last run: ${status.last_run?.ran_at || "not yet"} · Auto-apply: off · Auto-email: off · Notify ≥ ${status.notify_threshold}%`;
+
+    $("#career-notifications").innerHTML =
+      (brief.notifications || [])
+        .map(
+          (n) =>
+            `<article class="job-card"><h3>${escapeHtml(n.type)}</h3><p class="meta">${escapeHtml(n.message)}</p></article>`
+        )
+        .join("") || "<p class='note'>No notifications. Alerts appear for Match Score ≥ 80% and due follow-ups.</p>";
+
+    $("#career-brief-stats").innerHTML = [
+      ["New jobs today", (brief.new_jobs_found || []).length],
+      ["Best tracked", (brief.best_opportunities || []).length],
+      ["Follow-ups due", (brief.follow_ups_due_today || []).length],
+      ["Upcoming interviews", (brief.upcoming_interviews || []).length],
+      ["Closing ≤48h", (brief.jobs_closing_within_48_hours || []).length],
+      ["Recruiters viewing", (brief.recruiters_viewing_applications || []).length],
+    ]
+      .map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`)
+      .join("");
+
+    $("#career-best").innerHTML =
+      (brief.best_opportunities || [])
+        .map(
+          (j) => `<article class="job-card">
+            <h3>${escapeHtml(j.title)}</h3>
+            <p class="meta">${escapeHtml(j.company)} · Match ${j.score}% ${j.notify ? "· ALERT ≥80" : ""}</p>
+            <p class="meta">${escapeHtml(j.salary || "")}</p>
+          </article>`
+        )
+        .join("") || "<p class='note'>No scored jobs yet. Run Morning Agent.</p>";
+
+    const hi = brief.highest_interview_probability || {};
+    const sal = brief.salary_trends || {};
+    $("#career-brief-details").innerHTML = [
+      ["Highest match opportunity", hi.company ? `${hi.company} — ${hi.position} (${hi.match_score})` : "—"],
+      ["Salary avg / median", sal.samples ? `$${sal.average} / $${sal.median} (n=${sal.samples})` : sal.note || "—"],
+      [
+        "Companies hiring repeatedly",
+        (brief.companies_hiring_repeatedly || []).map((c) => `${c.company} (${c.open_roles_tracked})`).join(", ") || "—",
+      ],
+      [
+        "Missing skills",
+        (brief.missing_skills_appearing_frequently || []).map((s) => s.skill_or_tech).slice(0, 8).join(", ") || "—",
+      ],
+      [
+        "Cert suggestions",
+        (brief.recommended_certifications || []).map((c) => c.suggestion).slice(0, 2).join(" · ") || "—",
+      ],
+    ]
+      .map(([l, v]) => `<div class="metric-row"><span>${escapeHtml(l)}</span><strong>${escapeHtml(String(v))}</strong></div>`)
+      .join("");
+
+    $("#career-coach").innerHTML = [
+      ["Resume weaknesses", (coach.resume_weaknesses || []).join(" · ")],
+      ["Portfolio weaknesses", (coach.portfolio_weaknesses || []).join(" · ")],
+      [
+        "Interview performance",
+        `Behavioral ${coach.interview_performance?.behavioral_pass_rate ?? "—"}% · Technical ${
+          coach.interview_performance?.technical_pass_rate ?? "—"
+        }%`,
+      ],
+      [
+        "ATS missing keywords",
+        (coach.ats_keyword_coverage?.missing_from_resume_samples || [])
+          .map((k) => k.keyword)
+          .slice(0, 8)
+          .join(", ") || "—",
+      ],
+    ]
+      .map(([l, v]) => `<div class="metric-row"><span>${escapeHtml(l)}</span><strong>${escapeHtml(String(v))}</strong></div>`)
+      .join("");
+
+    $("#career-weekly-actions").innerHTML = (weekly.recommended_actions || [])
+      .map((a) => `<li>[${escapeHtml(a.area)}] ${escapeHtml(a.action)}</li>`)
+      .join("") || "<li>No actions yet.</li>";
+
+    $("#crm-list").innerHTML =
+      (crm.contacts || [])
+        .map(
+          (c) => `<article class="job-card">
+            <h3>${escapeHtml(c.recruiter_name || "Recruiter")} — ${escapeHtml(c.company)}</h3>
+            <p class="meta">${escapeHtml(c.email || "")} · ${escapeHtml(c.phone || "")}</p>
+            <p class="meta">Last: ${escapeHtml(c.last_contact || "—")} · Follow-up: ${escapeHtml(c.follow_up_date || "—")}</p>
+            <p class="meta">${escapeHtml(c.notes || "")}</p>
+            <p class="meta">Referrals: ${escapeHtml(c.referral_opportunities || "—")}</p>
+            <div class="card-actions">
+              <button type="button" class="btn" data-action="crm-delete" data-id="${c.id}">Delete</button>
+            </div>
+          </article>`
+        )
+        .join("") || "<p class='note'>No CRM contacts yet. Add one or import from applications.</p>";
+  }
+
+  $$("[data-career-panel]").forEach((chip) =>
+    chip.addEventListener("click", () => switchCareerPanel(chip.dataset.careerPanel))
+  );
+
+  $("#btn-career-run")?.addEventListener("click", async () => {
+    const btn = $("#btn-career-run");
+    btn.disabled = true;
+    btn.textContent = "Running…";
+    try {
+      const result = await api("/api/career-agent/run-morning", { method: "POST" });
+      alert(
+        `Career Agent finished.\nFetched ${result.refresh?.fetched ?? "—"}, matched ${result.refresh?.matched ?? "—"}.\n` +
+          `Notifications: ${(result.notifications || []).length}. Auto-apply: off.`
+      );
+      await loadCareerAgent();
+      switchCareerPanel("brief");
+    } catch (err) {
+      $("#career-meta").textContent = String(err.message || err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run Morning Agent";
+    }
+  });
+
+  $("#btn-career-brief")?.addEventListener("click", async () => {
+    await api("/api/career-agent/daily-brief?rebuild=true");
+    await loadCareerAgent();
+  });
+
+  $("#btn-career-weekly")?.addEventListener("click", async () => {
+    await api("/api/career-agent/coach/weekly-report", { method: "POST" });
+    await loadCareerAgent();
+    switchCareerPanel("coach");
+  });
+
+  $("#btn-crm-import")?.addEventListener("click", async () => {
+    const r = await api("/api/career-agent/crm/import-from-applications", { method: "POST" });
+    alert(`Imported ${r.created}, skipped ${r.skipped}. Auto-email: off.`);
+    await loadCareerAgent();
+    switchCareerPanel("crm");
+  });
+
+  $("#crm-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(e.target).entries());
+    await api("/api/career-agent/crm", { method: "POST", body: JSON.stringify(payload) });
+    e.target.reset();
+    await loadCareerAgent();
+    switchCareerPanel("crm");
+  });
+
+  $("#intel-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = Object.fromEntries(new FormData(e.target).entries());
+    const payload = {};
+    if (raw.application_id) payload.application_id = Number(raw.application_id);
+    if (raw.job_id) payload.job_id = Number(raw.job_id);
+    const intel = await api("/api/career-agent/interview-intelligence", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    $("#intel-body").innerHTML = `
+      <div class="metric-row"><span>Company / Role</span><strong>${escapeHtml(intel.company)} — ${escapeHtml(intel.position)}</strong></div>
+      <div class="why-box"><h4>30s elevator pitch</h4><p>${escapeHtml(intel.elevator_pitch_30s)}</p></div>
+      <div class="why-box"><h4>Company research</h4><p>${escapeHtml(intel.company_research)}</p></div>
+      <div class="metric-row"><span>Financial overview</span><strong>${escapeHtml(
+        intel.financial_overview?.available
+          ? (intel.financial_overview.figures || []).join("; ")
+          : intel.financial_overview?.note || "Unavailable"
+      )}</strong></div>
+      <div class="metric-row"><span>Products</span><strong>${escapeHtml((intel.products || []).join(" · "))}</strong></div>
+      <div class="metric-row"><span>Competitors</span><strong>${escapeHtml((intel.competitors || []).join(" · "))}</strong></div>
+      <div class="metric-row"><span>Culture</span><strong>${escapeHtml((intel.company_culture || []).join(" · "))}</strong></div>
+      <div class="metric-row"><span>Latest news</span><strong>${escapeHtml(
+        intel.latest_news?.available ? (intel.latest_news.items || []).join(" · ") : intel.latest_news?.note || "Unavailable"
+      )}</strong></div>
+      <div class="metric-row"><span>Technical topics</span><strong>${escapeHtml((intel.technical_topics_likely || []).join(", "))}</strong></div>
+      <h3>STAR answers</h3>
+      ${(intel.star_answers || [])
+        .map(
+          (s) => `<article class="star-block"><h4>${escapeHtml(s.title)}</h4>
+            <p><strong>S:</strong> ${escapeHtml(s.situation)}</p>
+            <p><strong>T:</strong> ${escapeHtml(s.task)}</p>
+            <p><strong>A:</strong> ${escapeHtml(s.action)}</p>
+            <p><strong>R:</strong> ${escapeHtml(s.result)}</p></article>`
+        )
+        .join("")}
+      <h3>Questions to ask</h3>
+      <ul>${(intel.questions_to_ask_interviewer || []).map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul>
+      <h3>Salary negotiation notes</h3>
+      <pre class="followup-body">${escapeHtml(JSON.stringify(intel.salary_negotiation_notes, null, 2))}</pre>
+      <p class="note">${escapeHtml((intel.notes || []).join(" "))}</p>
+    `;
+    switchCareerPanel("intel");
+  });
 
   $("#btn-assistant-refresh")?.addEventListener("click", () =>
     loadAssistant().catch((err) => {
@@ -1149,6 +1358,11 @@
         });
         alert(result.message || "Marked submitted.");
         await Promise.all([loadDashboard(), loadTracker(), loadAssistant().catch(() => null)]);
+      }
+      if (action === "crm-delete") {
+        if (!confirm("Delete this CRM contact?")) return;
+        await api(`/api/career-agent/crm/${id}`, { method: "DELETE" });
+        await loadCareerAgent();
       }
       if (action === "export-app") await exportApp(id);
       if (action === "export-job") await exportJob(id);
