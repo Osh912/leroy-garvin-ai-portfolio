@@ -8,12 +8,14 @@
 ## LEROY GARVIN JR
 Savannah, Georgia, USA | Open to Remote  
 Phone: (912) 901-6378 | Email: AlignedVibesCo@gmail.com | LinkedIn: https://www.linkedin.com/in/leroy-garvin-49443b423/  
-Portfolio: Web site in `/site` (GitHub Pages / Vercel) · Markdown vault in this repo
+Portfolio: https://leroy-garvin-ai-portfolio.vercel.app | Etsy: https://alignedvibesco.etsy.com
+
+**Positioning:** AI Automation | AI Operations | Workflow Automation
 
 ---
 
 ## PROFESSIONAL SUMMARY
-Owner and operator of Right Outside Auto Detailing LLC with hands-on experience independently designing and testing AI-assisted customer service workflows. Designed and iteratively refined conversation logic, prompts, business rules, and workflow documentation for an AI voice booking assistant through repeated testing, evaluation, and continuous workflow improvement. Designed and tested no-code automation workflows using n8n and Airtable to improve business operations, organize workflow steps, and support operational consistency. Uses ChatGPT and Claude to prototype workflows, document processes, and improve AI-assisted systems. Skilled at identifying workflow failures, refining prompts, and improving conversational AI through iterative testing and structured review. Brings AI workflow design, prompt engineering, conversational AI testing, workflow documentation, no-code automation, and business operations experience to AI Operations, AI Training, Prompt Engineering Support, Workflow Automation, AI Quality Assurance, AI Data Annotation, Conversational AI Testing, and AI Support Engineer roles.
+Owner and AI Operations Specialist at Right Outside Auto Detailing LLC. Independently design, test, and document AI-assisted customer service workflows and no-code automation using n8n and Airtable. Hands-on implementation across GH-X digital product automation (23 workflows / 8 stages), a 10-stage AI voice booking assistant, Harbor & Home product packaging, and LawOne AI platform foundations (in development). Uses ChatGPT and Claude to prototype workflows, document processes, and refine AI-assisted systems. Strong fit for AI Operations Specialist, Workflow Automation Specialist, AI Implementation Specialist, AI Support Specialist, Technical Support Specialist, Conversational AI QA, No-Code / Low-Code Automation Specialist, and Remote Operations Specialist roles.
 
 ---
 

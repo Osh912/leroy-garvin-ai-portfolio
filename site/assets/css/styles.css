@@ -542,6 +542,54 @@ main {
   padding-top: 3rem;
 }
 
+.live-work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.live-work-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.45);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.live-work-card:hover {
+  border-color: rgba(63, 92, 72, 0.4);
+  transform: translateY(-2px);
+  color: inherit;
+}
+
+.live-work-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--charcoal);
+}
+
+.live-work-card p {
+  margin: 0;
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.live-work-card .card-link {
+  margin-top: 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--forest);
+}
+
 /* ——— Prose / content ——— */
 .prose {
   max-width: 42rem;
