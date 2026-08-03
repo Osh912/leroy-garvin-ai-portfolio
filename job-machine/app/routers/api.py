@@ -710,13 +710,6 @@ def export_job(job_id: int, db: Session = Depends(get_db)):
     return ExportOut(job_id=job_id, **bundle)
 
 
-def _resolve_export_folder(company: str, title: str, job_id: int | None, application_id: int | None):
-    from app.services.packet_store import packet_dir
-
-    folder_id = job_id if job_id is not None else (application_id or 0)
-    return packet_dir(folder_id, company, title)
-
-
 @router.get("/applications/{app_id}/export/zip")
 def export_application_zip(app_id: int, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
