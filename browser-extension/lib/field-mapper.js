@@ -144,24 +144,63 @@
   }
 
   function highlightFileUploads(session) {
-    const resumeName = session?.file_filenames?.resume || "job-specific resume";
-    const coverName = session?.file_filenames?.cover || "job-specific cover letter";
+    const resumeName = session?.file_filenames?.resume || session?.preferred_attach?.resume || "resume.pdf";
+    const coverName = session?.file_filenames?.cover || session?.preferred_attach?.cover || "cover_letter.pdf";
     document.querySelectorAll("input[type=file]").forEach((el) => {
       const label = labelFor(el);
       const key = mapKey(label, el.name, el.id);
       el.classList.add("jm-file-upload");
       el.classList.add("jm-manual-review");
       const parent = el.closest("label") || el.parentElement;
-      if (!parent || parent.querySelector(".jm-file-hint")) return;
-      const hint = document.createElement("div");
-      hint.className = "jm-file-hint";
-      if (key === "cover_letter_file" || /cover/i.test(label + el.name)) {
-        hint.textContent = `Attach cover letter: ${coverName}`;
-      } else {
-        hint.textContent = `Attach resume: ${resumeName}`;
+      if (!parent) return;
+      if (!parent.querySelector(".jm-file-hint")) {
+        const hint = document.createElement("div");
+        hint.className = "jm-file-hint";
+        if (key === "cover_letter_file" || /cover/i.test(label + el.name)) {
+          hint.textContent = `Attach cover letter: ${coverName} (PDF preferred; DOCX fallback)`;
+        } else {
+          hint.textContent = `Attach resume: ${resumeName} (PDF preferred; DOCX fallback)`;
+        }
+        parent.appendChild(hint);
       }
-      parent.appendChild(hint);
+      if (!parent.querySelector(".jm-attach-btn")) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "jm-attach-btn";
+        const isCover = key === "cover_letter_file" || /cover/i.test(label + el.name);
+        btn.textContent = isCover ? "Attach Cover (PDF)" : "Attach Resume (PDF)";
+        btn.addEventListener("click", async (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          try {
+            await attachPreferredToInput(el, session, isCover ? "cover" : "resume");
+          } catch (err) {
+            alert(`Could not attach file: ${err.message || err}\nDownload from the panel and upload manually.`);
+          }
+        });
+        parent.appendChild(btn);
+      }
     });
+  }
+
+  async function attachPreferredToInput(inputEl, session, kind) {
+    if (!session?.application_id) throw new Error("No active application session");
+    const preferred = await window.JMAutofillAPI.fetchPreferredFile(session.application_id, kind);
+    const dt = new DataTransfer();
+    dt.items.add(preferred.file);
+    inputEl.files = dt.files;
+    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+    inputEl.classList.add("jm-autofilled");
+    inputEl.classList.remove("jm-manual-review");
+    const parent = inputEl.closest("label") || inputEl.parentElement;
+    const status = parent?.querySelector(".jm-attach-status") || document.createElement("div");
+    status.className = "jm-attach-status";
+    status.textContent = `Attached ${preferred.filename} (${preferred.format.toUpperCase()}${
+      preferred.format !== "pdf" ? " — PDF fallback" : ""
+    })`;
+    if (parent && !parent.querySelector(".jm-attach-status")) parent.appendChild(status);
+    return preferred;
   }
 
   window.JMFieldMapper = {
@@ -171,6 +210,7 @@
     applyFill,
     highlightManualReview,
     highlightFileUploads,
+    attachPreferredToInput,
     setNativeValue,
   };
 })();

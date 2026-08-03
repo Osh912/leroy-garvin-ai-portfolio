@@ -62,7 +62,12 @@ Only when present in verified Job Machine profile:
 - LinkedIn URL, Portfolio URL, GitHub URL (profile-verified)  
 - Current job title  
 
-Resume/cover are prepared as **job-specific files** for manual upload (company+role verified in filename).
+Resume/cover are prepared as **job-specific ATS files** in the packet folder:
+
+- `resume.md` / `resume.pdf` / `resume.docx`
+- `cover_letter.md` / `cover_letter.pdf` / `cover_letter.docx`
+
+**Export Packet** writes all formats and downloads a zip. Extension **Attach Resume (PDF)** selects PDF by default (DOCX fallback).
 
 ## F. Fields requiring manual review
 

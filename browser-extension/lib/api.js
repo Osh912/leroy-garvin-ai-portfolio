@@ -77,8 +77,50 @@
     }
   }
 
-  function fileDownloadUrl(appId, kind) {
-    return `${API_BASE}/api/autofill/applications/${appId}/files/${kind}`;
+  function fileDownloadUrl(appId, kind, format) {
+    const q = format ? `?format=${encodeURIComponent(format)}` : "";
+    return `${API_BASE}/api/autofill/applications/${appId}/files/${kind}${q}`;
+  }
+
+  async function fetchPreferredFile(appId, kind) {
+    // Prefer PDF; fall back to DOCX automatically
+    const order = ["pdf", "docx", "md"];
+    let lastErr = null;
+    for (const fmt of order) {
+      try {
+        const res = await fetch(fileDownloadUrl(appId, kind, fmt));
+        if (!res.ok) {
+          lastErr = new Error(await res.text());
+          continue;
+        }
+        const blob = await res.blob();
+        const cd = res.headers.get("content-disposition") || "";
+        const match = /filename="?([^";]+)"?/i.exec(cd);
+        const fallbackName =
+          kind === "resume"
+            ? fmt === "pdf"
+              ? "resume.pdf"
+              : fmt === "docx"
+                ? "resume.docx"
+                : "resume.md"
+            : fmt === "pdf"
+              ? "cover_letter.pdf"
+              : fmt === "docx"
+                ? "cover_letter.docx"
+                : "cover_letter.md";
+        const name = match ? match[1] : fallbackName;
+        const type =
+          fmt === "pdf"
+            ? "application/pdf"
+            : fmt === "docx"
+              ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              : "text/markdown";
+        return { file: new File([blob], name, { type }), format: fmt, filename: name };
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr || new Error("No attachable file available");
   }
 
   window.JMAutofillAPI = {
@@ -94,5 +136,6 @@
     getPanel,
     logEvent,
     fileDownloadUrl,
+    fetchPreferredFile,
   };
 })();

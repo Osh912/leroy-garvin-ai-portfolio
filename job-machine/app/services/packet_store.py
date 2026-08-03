@@ -7,6 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from app.config import ROOT
+from app.services.document_export import (
+    COVER_DOCX,
+    COVER_MD,
+    COVER_PDF,
+    RESUME_DOCX,
+    RESUME_MD,
+    RESUME_PDF,
+    build_packet_zip,
+    write_ats_packet_documents,
+)
 from app.services.filters import load_profile
 from app.services.pipeline_stages import PORTFOLIO_URL
 
@@ -39,17 +49,26 @@ def save_packet_locally(
     estimated_salary: str,
     status: str = "ready",
 ) -> dict[str, str]:
-    """Persist resume, cover, prep, and meta under data/interview_packets/."""
+    """Persist resume, cover (md/pdf/docx), prep, and meta under data/interview_packets/."""
     profile = load_profile()
     folder = packet_dir(job_id, company, title)
-    (folder / "resume.md").write_text(resume, encoding="utf-8")
-    (folder / "cover_letter.md").write_text(cover, encoding="utf-8")
+
+    docs = write_ats_packet_documents(
+        folder,
+        resume_markdown=resume,
+        cover_markdown=cover,
+        company=company,
+        title=title,
+    )
+
     (folder / "interview_prep.json").write_text(json.dumps(prep, indent=2), encoding="utf-8")
 
     from app.services.interview_prep import render_prep_markdown
 
     prep_md = render_prep_markdown(prep, {"title": title, "company": company})
     (folder / "interview_prep.md").write_text(prep_md, encoding="utf-8")
+
+    zip_path = build_packet_zip(folder)
 
     meta = {
         "job_id": job_id,
@@ -65,15 +84,28 @@ def save_packet_locally(
         "portfolio_url": profile["candidate"].get("portfolio") or PORTFOLIO_URL,
         "projects": projects,
         "saved_at": datetime.utcnow().isoformat() + "Z",
+        "preferred_resume": docs.get("preferred_resume"),
+        "preferred_cover": docs.get("preferred_cover"),
+        "ats_export": {
+            "pdf_ok": docs.get("pdf_ok"),
+            "docx_ok": docs.get("docx_ok"),
+            "fallback_used": docs.get("fallback_used"),
+            "files_written": docs.get("files_written"),
+        },
         "paths": {
-            "resume": str(folder / "resume.md"),
-            "cover_letter": str(folder / "cover_letter.md"),
+            "resume": str(folder / RESUME_MD),
+            "cover_letter": str(folder / COVER_MD),
+            "resume_pdf": docs["paths"].get("resume_pdf"),
+            "cover_pdf": docs["paths"].get("cover_pdf"),
+            "resume_docx": docs["paths"].get("resume_docx"),
+            "cover_docx": docs["paths"].get("cover_docx"),
+            "export_zip": str(zip_path),
             "interview_prep_json": str(folder / "interview_prep.json"),
             "interview_prep_md": str(folder / "interview_prep.md"),
         },
     }
     (folder / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    return meta["paths"]
+    return {k: v for k, v in meta["paths"].items() if v}
 
 
 def load_packet_meta(job_id: int) -> dict[str, Any] | None:
@@ -97,13 +129,80 @@ def export_bundle_files(
     portfolio_url: str,
     company: str,
     title: str,
-) -> dict[str, str]:
-    """Return text payloads for one-click export (client downloads)."""
+    job_id: int | None = None,
+    application_id: int | None = None,
+) -> dict[str, Any]:
+    """Generate md+pdf+docx into the job packet folder and return one-click export payload."""
+    folder_id = job_id if job_id is not None else (application_id or 0)
+    folder = packet_dir(folder_id, company, title)
+    docs = write_ats_packet_documents(
+        folder,
+        resume_markdown=resume,
+        cover_markdown=cover,
+        company=company,
+        title=title,
+    )
+    zip_path = build_packet_zip(folder)
+
+    # Keep company-tagged copies for legacy autofill token checks
+    tagged_resume = folder / f"{_safe(company)}_{_safe(title)}_resume.md"
+    tagged_cover = folder / f"{_safe(company)}_{_safe(title)}_cover.md"
+    tagged_resume.write_text(resume or "", encoding="utf-8")
+    tagged_cover.write_text(cover or "", encoding="utf-8")
+
+    base = ""
+    if application_id:
+        base = f"/api/applications/{application_id}/export"
+    elif job_id is not None:
+        base = f"/api/jobs/{job_id}/export"
+    else:
+        base = ""
+
+    files = {
+        RESUME_MD: str(folder / RESUME_MD),
+        RESUME_PDF: docs["paths"].get("resume_pdf"),
+        RESUME_DOCX: docs["paths"].get("resume_docx"),
+        COVER_MD: str(folder / COVER_MD),
+        COVER_PDF: docs["paths"].get("cover_pdf"),
+        COVER_DOCX: docs["paths"].get("cover_docx"),
+        "export_packet.zip": str(zip_path),
+    }
+
+    download_urls = {}
+    if base:
+        download_urls = {
+            RESUME_MD: f"{base}/file/{RESUME_MD}",
+            RESUME_PDF: f"{base}/file/{RESUME_PDF}",
+            RESUME_DOCX: f"{base}/file/{RESUME_DOCX}",
+            COVER_MD: f"{base}/file/{COVER_MD}",
+            COVER_PDF: f"{base}/file/{COVER_PDF}",
+            COVER_DOCX: f"{base}/file/{COVER_DOCX}",
+            "zip": f"{base}/zip",
+        }
+
+    preferred_resume = docs.get("preferred_resume") or RESUME_PDF
+    preferred_cover = docs.get("preferred_cover") or COVER_PDF
+
     return {
-        "resume_filename": f"{_safe(company)}_{_safe(title)}_resume.md",
-        "cover_filename": f"{_safe(company)}_{_safe(title)}_cover.md",
+        "resume_filename": RESUME_MD,
+        "cover_filename": COVER_MD,
         "resume": resume,
         "cover_letter": cover,
         "portfolio_url": portfolio_url or PORTFOLIO_URL,
-        "export_note": "Applications require Leroy's approval — never auto-submitted.",
+        "export_note": (
+            "ATS packet ready (md + pdf + docx). PDF preferred for upload; DOCX used if PDF fails. "
+            "Applications require Leroy's approval — never auto-submitted."
+        ),
+        "folder": str(folder),
+        "files": {k: v for k, v in files.items() if v},
+        "files_written": docs.get("files_written") or [],
+        "download_urls": download_urls,
+        "zip_url": download_urls.get("zip"),
+        "preferred_resume": preferred_resume,
+        "preferred_cover": preferred_cover,
+        "preferred_resume_url": download_urls.get(preferred_resume),
+        "preferred_cover_url": download_urls.get(preferred_cover),
+        "pdf_ok": bool(docs.get("pdf_ok")),
+        "docx_ok": bool(docs.get("docx_ok")),
+        "fallback_used": bool(docs.get("fallback_used")),
     }

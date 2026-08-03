@@ -164,6 +164,18 @@ class ExportOut(BaseModel):
     cover_letter: str
     portfolio_url: str
     export_note: str
+    folder: str | None = None
+    files: dict[str, str | None] = Field(default_factory=dict)
+    files_written: list[str] = Field(default_factory=list)
+    download_urls: dict[str, str] = Field(default_factory=dict)
+    zip_url: str | None = None
+    preferred_resume: str = "resume.pdf"
+    preferred_cover: str = "cover_letter.pdf"
+    preferred_resume_url: str | None = None
+    preferred_cover_url: str | None = None
+    pdf_ok: bool = False
+    docx_ok: bool = False
+    fallback_used: bool = False
 
 
 class HighestInterviewOut(BaseModel):

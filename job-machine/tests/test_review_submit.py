@@ -90,8 +90,8 @@ def test_open_session_checklist_and_never_autosubmit():
     assert payload["mode"] == "review_and_submit"
     assert payload["submission_checklist"]["ready_for_final_review_submits"] is False
     assert payload["submission_checklist"]["button_label"] == "READY FOR FINAL REVIEW"
-    assert payload["file_filenames"]["resume"]
-    assert "GitLab" in payload["file_filenames"]["resume"]
+    assert payload["file_filenames"]["resume"] in {"resume.pdf", "resume.docx", "resume.md"}
+    assert "resume" in payload["file_filenames"]["resume"]
     assert "workable" in payload["platforms_supported"]
     db.refresh(app)
     assert app.status == "in_progress"

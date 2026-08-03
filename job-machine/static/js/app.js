@@ -106,6 +106,54 @@
     URL.revokeObjectURL(url);
   }
 
+  function downloadUrl(url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    if (filename) a.download = filename;
+    a.rel = "noopener";
+    a.click();
+  }
+
+  async function exportApp(appId) {
+    const bundle = await api(`/api/applications/${appId}/export`);
+    if (bundle.zip_url) {
+      downloadUrl(bundle.zip_url);
+    } else {
+      const urls = bundle.download_urls || {};
+      ["resume.pdf", "resume.docx", "resume.md", "cover_letter.pdf", "cover_letter.docx", "cover_letter.md"].forEach(
+        (name) => {
+          if (urls[name]) downloadUrl(urls[name], name);
+        }
+      );
+    }
+    await navigator.clipboard.writeText(bundle.portfolio_url);
+    const written = (bundle.files_written || []).join(", ") || "md/pdf/docx";
+    alert(
+      `Export Packet ready (${written}).\n` +
+        `Folder: ${bundle.folder || "data/interview_packets/"}\n` +
+        `Preferred upload: ${bundle.preferred_resume || "resume.pdf"} / ${bundle.preferred_cover || "cover_letter.pdf"}\n` +
+        `${bundle.fallback_used ? "PDF fallback to DOCX was used.\n" : ""}` +
+        `Portfolio URL copied:\n${bundle.portfolio_url}`
+    );
+  }
+  async function exportJob(jobId) {
+    const bundle = await api(`/api/jobs/${jobId}/export`);
+    if (bundle.zip_url) {
+      downloadUrl(bundle.zip_url);
+    } else {
+      const urls = bundle.download_urls || {};
+      Object.keys(urls)
+        .filter((k) => k !== "zip")
+        .forEach((name) => downloadUrl(urls[name], name));
+    }
+    await navigator.clipboard.writeText(bundle.portfolio_url);
+    alert(
+      `Export Packet ready (${(bundle.files_written || []).join(", ") || "all formats"}).\n` +
+        `Preferred: ${bundle.preferred_resume} / ${bundle.preferred_cover}\n` +
+        `Portfolio URL copied:\n${bundle.portfolio_url}`
+    );
+  }
+
   function formatSalary(job) {
     return job.estimated_salary || job.salary_text || "Not listed";
   }
@@ -927,21 +975,6 @@
     $("#detail-dialog").showModal();
     $("#copy-resume")?.addEventListener("click", () => navigator.clipboard.writeText(packet.tailored_resume));
     $("#copy-cover")?.addEventListener("click", () => navigator.clipboard.writeText(packet.cover_letter));
-  }
-
-  async function exportApp(appId) {
-    const bundle = await api(`/api/applications/${appId}/export`);
-    downloadText(bundle.resume_filename, bundle.resume);
-    downloadText(bundle.cover_filename, bundle.cover_letter);
-    await navigator.clipboard.writeText(bundle.portfolio_url);
-    alert(`Exported resume + cover.\nPortfolio URL copied:\n${bundle.portfolio_url}`);
-  }
-  async function exportJob(jobId) {
-    const bundle = await api(`/api/jobs/${jobId}/export`);
-    downloadText(bundle.resume_filename, bundle.resume);
-    downloadText(bundle.cover_filename, bundle.cover_letter);
-    await navigator.clipboard.writeText(bundle.portfolio_url);
-    alert(`Exported resume + cover.\nPortfolio URL copied:\n${bundle.portfolio_url}`);
   }
 
   $$(".tab").forEach((tab) =>

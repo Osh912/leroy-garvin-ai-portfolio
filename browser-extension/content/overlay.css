@@ -119,6 +119,24 @@
   padding: 4px 6px;
   border-radius: 4px;
 }
+.jm-attach-btn {
+  margin-top: 6px;
+  margin-right: 6px;
+  border: 1px solid #2f5d45;
+  background: #2f5d45;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.jm-attach-status {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #2f5d45;
+  font-weight: 650;
+}
 
 input.jm-autofilled,
 textarea.jm-autofilled,

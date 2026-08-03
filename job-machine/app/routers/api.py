@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -686,6 +687,8 @@ def export_application(app_id: int, db: Session = Depends(get_db)):
         portfolio_url=PORTFOLIO_URL,
         company=row.company,
         title=row.position,
+        job_id=row.job_id,
+        application_id=row.id,
     )
     return ExportOut(application_id=row.id, job_id=row.job_id, **bundle)
 
@@ -702,8 +705,136 @@ def export_job(job_id: int, db: Session = Depends(get_db)):
         portfolio_url=PORTFOLIO_URL,
         company=job.company if job else "company",
         title=job.title if job else "role",
+        job_id=job_id,
     )
     return ExportOut(job_id=job_id, **bundle)
+
+
+def _resolve_export_folder(company: str, title: str, job_id: int | None, application_id: int | None):
+    from app.services.packet_store import packet_dir
+
+    folder_id = job_id if job_id is not None else (application_id or 0)
+    return packet_dir(folder_id, company, title)
+
+
+@router.get("/applications/{app_id}/export/zip")
+def export_application_zip(app_id: int, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
+    from app.services.document_export import build_packet_zip
+    from app.services.packet_store import export_bundle_files
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    bundle = export_bundle_files(
+        resume=row.tailored_resume or "",
+        cover=row.cover_letter or "",
+        portfolio_url=PORTFOLIO_URL,
+        company=row.company,
+        title=row.position,
+        job_id=row.job_id,
+        application_id=row.id,
+    )
+    folder = Path(bundle["folder"])
+    zip_path = build_packet_zip(folder)
+    return FileResponse(
+        path=str(zip_path),
+        media_type="application/zip",
+        filename=f"{row.company}_{row.position}_packet.zip".replace(" ", "-"),
+    )
+
+
+@router.get("/jobs/{job_id}/export/zip")
+def export_job_zip(job_id: int, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
+    from app.services.document_export import build_packet_zip
+    from app.services.packet_store import export_bundle_files
+
+    gen = generate_packet(job_id, db)
+    job = db.get(Job, job_id)
+    company = job.company if job else "company"
+    title = job.title if job else "role"
+    bundle = export_bundle_files(
+        resume=gen.tailored_resume,
+        cover=gen.cover_letter,
+        portfolio_url=PORTFOLIO_URL,
+        company=company,
+        title=title,
+        job_id=job_id,
+    )
+    zip_path = build_packet_zip(Path(bundle["folder"]))
+    return FileResponse(
+        path=str(zip_path),
+        media_type="application/zip",
+        filename=f"{company}_{title}_packet.zip".replace(" ", "-"),
+    )
+
+
+@router.get("/applications/{app_id}/export/file/{filename}")
+def export_application_file(app_id: int, filename: str, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
+    from app.services.document_export import is_standard_packet_filename
+    from app.services.packet_store import export_bundle_files
+
+    row = db.get(Application, app_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+    if not is_standard_packet_filename(filename):
+        raise HTTPException(400, "Invalid export filename")
+    bundle = export_bundle_files(
+        resume=row.tailored_resume or "",
+        cover=row.cover_letter or "",
+        portfolio_url=PORTFOLIO_URL,
+        company=row.company,
+        title=row.position,
+        job_id=row.job_id,
+        application_id=row.id,
+    )
+    path = Path(bundle["folder"]) / filename
+    if not path.exists():
+        raise HTTPException(404, f"{filename} not available (generation may have failed)")
+    media = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".md": "text/markdown; charset=utf-8",
+        ".zip": "application/zip",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    return FileResponse(path=str(path), media_type=media, filename=path.name)
+
+
+@router.get("/jobs/{job_id}/export/file/{filename}")
+def export_job_file(job_id: int, filename: str, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+
+    from app.services.document_export import is_standard_packet_filename
+    from app.services.packet_store import export_bundle_files
+
+    if not is_standard_packet_filename(filename):
+        raise HTTPException(400, "Invalid export filename")
+    gen = generate_packet(job_id, db)
+    job = db.get(Job, job_id)
+    company = job.company if job else "company"
+    title = job.title if job else "role"
+    bundle = export_bundle_files(
+        resume=gen.tailored_resume,
+        cover=gen.cover_letter,
+        portfolio_url=PORTFOLIO_URL,
+        company=company,
+        title=title,
+        job_id=job_id,
+    )
+    path = Path(bundle["folder"]) / filename
+    if not path.exists():
+        raise HTTPException(404, f"{filename} not available")
+    media = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".md": "text/markdown; charset=utf-8",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    return FileResponse(path=str(path), media_type=media, filename=path.name)
 
 
 @router.get("/analytics")
@@ -1074,7 +1205,12 @@ def review_submit_duplicate(app_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/autofill/applications/{app_id}/files/{kind}")
-def autofill_download_file(app_id: int, kind: str, db: Session = Depends(get_db)):
+def autofill_download_file(
+    app_id: int,
+    kind: str,
+    format: str | None = Query(None, description="pdf|docx|md — default prefers pdf then docx"),
+    db: Session = Depends(get_db),
+):
     from fastapi.responses import FileResponse
 
     from app.services.safe_autofill import ensure_application_files, verify_file_belongs_to_application
@@ -1085,22 +1221,69 @@ def autofill_download_file(app_id: int, kind: str, db: Session = Depends(get_db)
     job = db.get(Job, row.job_id) if row.job_id else None
     files = ensure_application_files(row, job)
     kind = (kind or "").lower()
-    path = None
-    media = "text/plain"
-    if kind == "resume":
-        path = files.get("resume_pdf") or files.get("resume_txt") or files.get("resume_md")
-        media = "application/pdf" if path and str(path).endswith(".pdf") else "text/plain"
-    elif kind == "cover":
-        path = files.get("cover_pdf") or files.get("cover_txt") or files.get("cover_md")
-        media = "application/pdf" if path and str(path).endswith(".pdf") else "text/plain"
-    else:
+    fmt = (format or "").lower().strip() or None
+    if kind not in {"resume", "cover"}:
         raise HTTPException(400, "kind must be resume or cover")
+
+    candidates: list[tuple[str | None, str]] = []
+    if kind == "resume":
+        if fmt == "pdf":
+            candidates = [(files.get("resume_pdf"), "application/pdf")]
+        elif fmt == "docx":
+            candidates = [
+                (
+                    files.get("resume_docx"),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            ]
+        elif fmt == "md":
+            candidates = [(files.get("resume_md"), "text/markdown; charset=utf-8")]
+        else:
+            # Prefer PDF, fall back to DOCX, then md/txt
+            candidates = [
+                (files.get("resume_pdf"), "application/pdf"),
+                (
+                    files.get("resume_docx"),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+                (files.get("resume_md"), "text/markdown; charset=utf-8"),
+                (files.get("resume_txt"), "text/plain"),
+            ]
+    else:
+        if fmt == "pdf":
+            candidates = [(files.get("cover_pdf"), "application/pdf")]
+        elif fmt == "docx":
+            candidates = [
+                (
+                    files.get("cover_docx"),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            ]
+        elif fmt == "md":
+            candidates = [(files.get("cover_md"), "text/markdown; charset=utf-8")]
+        else:
+            candidates = [
+                (files.get("cover_pdf"), "application/pdf"),
+                (
+                    files.get("cover_docx"),
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+                (files.get("cover_md"), "text/markdown; charset=utf-8"),
+                (files.get("cover_txt"), "text/plain"),
+            ]
+
+    path = None
+    media = "application/octet-stream"
+    for candidate, mime in candidates:
+        if candidate and Path(candidate).exists():
+            path = candidate
+            media = mime
+            break
     if not path:
-        raise HTTPException(404, "File not prepared. Run Prepare Application first.")
-    from pathlib import Path
+        raise HTTPException(404, "File not prepared. Run Prepare Application / Export Packet first.")
 
     p = Path(path)
-    if not p.exists() or not verify_file_belongs_to_application(app_id, p.name, db):
+    if not verify_file_belongs_to_application(app_id, p.name, db):
         raise HTTPException(400, "File failed company/role verification — refusing download.")
     return FileResponse(path=str(p), media_type=media, filename=p.name)
 

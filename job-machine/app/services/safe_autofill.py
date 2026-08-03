@@ -210,17 +210,28 @@ def _save_meta(row: Application, meta: dict[str, Any]) -> None:
 
 
 def ensure_application_files(row: Application, job: Job | None) -> dict[str, Any]:
-    """Write job-specific resume/cover files locally. Verify company/role in filenames."""
+    """Write job-specific resume/cover files (md/pdf/docx). Prefer PDF for ATS upload."""
+    from app.services.document_export import write_ats_packet_documents
+
     company = row.company
     title = row.position
     folder = packet_dir(row.job_id or row.id, company, title)
+    resume = row.tailored_resume or ""
+    cover = row.cover_letter or ""
+
+    docs = write_ats_packet_documents(
+        folder,
+        resume_markdown=resume,
+        cover_markdown=cover,
+        company=company,
+        title=title,
+    )
+
+    # Legacy company/role-tagged copies for older verify helpers
     resume_path = folder / f"{_safe(company)}_{_safe(title)}_resume.md"
     cover_path = folder / f"{_safe(company)}_{_safe(title)}_cover.md"
     resume_txt = folder / f"{_safe(company)}_{_safe(title)}_resume.txt"
     cover_txt = folder / f"{_safe(company)}_{_safe(title)}_cover.txt"
-
-    resume = row.tailored_resume or ""
-    cover = row.cover_letter or ""
     if resume:
         resume_path.write_text(resume, encoding="utf-8")
         resume_txt.write_text(resume, encoding="utf-8")
@@ -228,79 +239,50 @@ def ensure_application_files(row: Application, job: Job | None) -> dict[str, Any
         cover_path.write_text(cover, encoding="utf-8")
         cover_txt.write_text(cover, encoding="utf-8")
 
-    # Optional simple PDFs when reportlab available
-    resume_pdf = folder / f"{_safe(company)}_{_safe(title)}_resume.pdf"
-    cover_pdf = folder / f"{_safe(company)}_{_safe(title)}_cover.pdf"
-    pdf_ok = False
-    if resume or cover:
-        try:
-            pdf_ok = _write_text_pdf(resume_pdf, f"Resume — {title} @ {company}", resume)
-            _write_text_pdf(cover_pdf, f"Cover Letter — {title} @ {company}", cover)
-        except Exception:  # noqa: BLE001
-            pdf_ok = False
+    preferred_resume = docs.get("preferred_resume") or "resume.pdf"
+    preferred_cover = docs.get("preferred_cover") or "cover_letter.pdf"
+    resume_pdf = docs["paths"].get("resume_pdf")
+    cover_pdf = docs["paths"].get("cover_pdf")
+    resume_docx = docs["paths"].get("resume_docx")
+    cover_docx = docs["paths"].get("cover_docx")
 
     return {
         "company": company,
         "role": title,
         "job_id": row.job_id,
         "application_id": row.id,
+        "folder": str(folder),
         "resume_version": _meta(row).get("resume_version") or "tailored",
         "cover_version": _meta(row).get("cover_version") or "tailored",
-        "resume_md": str(resume_path) if resume_path.exists() else None,
-        "cover_md": str(cover_path) if cover_path.exists() else None,
+        "resume_md": docs["paths"].get("resume_md") or str(folder / "resume.md"),
+        "cover_md": docs["paths"].get("cover_md") or str(folder / "cover_letter.md"),
         "resume_txt": str(resume_txt) if resume_txt.exists() else None,
         "cover_txt": str(cover_txt) if cover_txt.exists() else None,
-        "resume_pdf": str(resume_pdf) if pdf_ok and resume_pdf.exists() else None,
-        "cover_pdf": str(cover_pdf) if cover_pdf.exists() and pdf_ok else None,
+        "resume_pdf": resume_pdf,
+        "cover_pdf": cover_pdf,
+        "resume_docx": resume_docx,
+        "cover_docx": cover_docx,
+        "preferred_resume": preferred_resume,
+        "preferred_cover": preferred_cover,
+        "preferred_resume_path": docs.get("preferred_resume_path"),
+        "preferred_cover_path": docs.get("preferred_cover_path"),
+        "fallback_used": bool(docs.get("fallback_used")),
         "download_resume_url": f"/api/autofill/applications/{row.id}/files/resume",
         "download_cover_url": f"/api/autofill/applications/{row.id}/files/cover",
+        "download_resume_pdf_url": f"/api/autofill/applications/{row.id}/files/resume?format=pdf",
+        "download_resume_docx_url": f"/api/autofill/applications/{row.id}/files/resume?format=docx",
+        "download_cover_pdf_url": f"/api/autofill/applications/{row.id}/files/cover?format=pdf",
+        "download_cover_docx_url": f"/api/autofill/applications/{row.id}/files/cover?format=docx",
         "verify_token": f"{row.id}:{_safe(company)}:{_safe(title)}",
+        "file_filenames": {
+            "resume": preferred_resume,
+            "cover": preferred_cover,
+            "resume_pdf": "resume.pdf" if resume_pdf else None,
+            "resume_docx": "resume.docx" if resume_docx else None,
+            "cover_pdf": "cover_letter.pdf" if cover_pdf else None,
+            "cover_docx": "cover_letter.docx" if cover_docx else None,
+        },
     }
-
-
-def _write_text_pdf(path: Path, title: str, body: str) -> bool:
-    if not body.strip():
-        return False
-    from reportlab.lib.pagesizes import letter
-    from reportlab.pdfgen import canvas
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    c = canvas.Canvas(str(path), pagesize=letter)
-    width, height = letter
-    y = height - 50
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(50, y, title[:90])
-    y -= 24
-    c.setFont("Helvetica", 9)
-    for line in body.splitlines() or [""]:
-        for chunk in _wrap(line, 95):
-            if y < 50:
-                c.showPage()
-                c.setFont("Helvetica", 9)
-                y = height - 50
-            c.drawString(50, y, chunk[:120])
-            y -= 12
-    c.save()
-    return path.exists()
-
-
-def _wrap(text: str, width: int) -> list[str]:
-    if not text:
-        return [""]
-    words = text.split()
-    lines: list[str] = []
-    cur: list[str] = []
-    for w in words:
-        trial = " ".join(cur + [w])
-        if len(trial) > width:
-            if cur:
-                lines.append(" ".join(cur))
-            cur = [w]
-        else:
-            cur.append(w)
-    if cur:
-        lines.append(" ".join(cur))
-    return lines or [""]
 
 
 def safety_check(row: Application, job: Job | None, files: dict[str, Any]) -> dict[str, Any]:
@@ -309,8 +291,12 @@ def safety_check(row: Application, job: Job | None, files: dict[str, Any]) -> di
     items = {
         "correct_company": bool(row.company) and (not job or row.company == job.company),
         "correct_job_title": bool(row.position) and (not job or row.position == job.title),
-        "correct_resume_version": bool(row.tailored_resume and files.get("resume_txt")),
-        "correct_cover_letter_version": bool(row.cover_letter and files.get("cover_txt")),
+        "correct_resume_version": bool(
+            row.tailored_resume and (files.get("resume_md") or files.get("resume_pdf") or files.get("resume_txt"))
+        ),
+        "correct_cover_letter_version": bool(
+            row.cover_letter and (files.get("cover_md") or files.get("cover_pdf") or files.get("cover_txt"))
+        ),
         "portfolio_url_included": bool(fields.get("portfolio")),
         "linkedin_url_included": bool(fields.get("linkedin")),
         "contact_information_verified": bool(fields.get("email") and fields.get("phone")),
@@ -343,10 +329,20 @@ def build_autofill_payload(row: Application, db: Session) -> dict[str, Any]:
     manual_only = [k for k in SAFE_AUTOFILL_KEYS if not fields.get(k)]
     meta = _meta(row)
 
-    resume_name = Path(
-        files.get("resume_pdf") or files.get("resume_txt") or files.get("resume_md") or ""
+    resume_name = (files.get("file_filenames") or {}).get("resume") or Path(
+        files.get("preferred_resume_path")
+        or files.get("resume_pdf")
+        or files.get("resume_docx")
+        or files.get("resume_md")
+        or ""
     ).name
-    cover_name = Path(files.get("cover_pdf") or files.get("cover_txt") or files.get("cover_md") or "").name
+    cover_name = (files.get("file_filenames") or {}).get("cover") or Path(
+        files.get("preferred_cover_path")
+        or files.get("cover_pdf")
+        or files.get("cover_docx")
+        or files.get("cover_md")
+        or ""
+    ).name
     return {
         "mode": "review_and_submit",
         "auto_submit": False,
@@ -366,6 +362,12 @@ def build_autofill_payload(row: Application, db: Session) -> dict[str, Any]:
         "manual_or_missing_fields": manual_only,
         "files": files,
         "file_filenames": {"resume": resume_name, "cover": cover_name},
+        "preferred_attach": {
+            "resume": files.get("preferred_resume") or "resume.pdf",
+            "cover": files.get("preferred_cover") or "cover_letter.pdf",
+            "resume_fallback": "resume.docx",
+            "cover_fallback": "cover_letter.docx",
+        },
         "safety_check": check,
         "match_score": row.application_score,
         "sensitive_policy": {
@@ -629,13 +631,22 @@ def mark_submitted(
 
 
 def verify_file_belongs_to_application(app_id: int, filename: str, db: Session) -> bool:
+    from app.services.document_export import is_standard_packet_filename
+
     row = db.get(Application, app_id)
     if not row:
         return False
+    name = (filename or "").strip()
+    if not name:
+        return False
+    # Standard packet names are allowed when served from this application's packet folder
+    if is_standard_packet_filename(name):
+        # App-scoped download endpoints already resolve the correct packet folder.
+        return True
     company_token = _safe(row.company).lower()
     role_token = _safe(row.position).lower()
-    name = (filename or "").lower()
-    return company_token in name and role_token in name
+    lower = name.lower()
+    return company_token in lower and role_token in lower
 
 
 def classify_detected_fields(detected: list[dict[str, Any]]) -> dict[str, Any]:

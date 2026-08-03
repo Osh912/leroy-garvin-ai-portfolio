@@ -169,13 +169,15 @@
       <div class="jm-actions">
         <button class="jm-btn primary" id="jm-confirm" ${state.confirmed ? "disabled" : ""}>Confirm Autofill</button>
         <button class="jm-btn" id="jm-suggest">Suggested answers…</button>
+        <button class="jm-btn" id="jm-attach-resume">Attach Resume (PDF)</button>
+        <button class="jm-btn" id="jm-attach-cover">Attach Cover (PDF)</button>
         <button class="jm-btn" id="jm-ready" ${state.readyForFinal ? "disabled" : ""}>READY FOR FINAL REVIEW</button>
         <button class="jm-btn primary" id="jm-did-submit">I Clicked Submit…</button>
         <button class="jm-btn" id="jm-map">Field map</button>
         <a class="jm-btn" href="${window.JMAutofillAPI.fileDownloadUrl(s.application_id, "resume")}" target="_blank">Download resume</a>
         <a class="jm-btn" href="${window.JMAutofillAPI.fileDownloadUrl(s.application_id, "cover")}" target="_blank">Download cover</a>
       </div>
-      <p class="jm-mini">Attach the exact filenames shown above. Browser may block file autofill — complete uploads yourself. READY FOR FINAL REVIEW never submits.</p>
+      <p class="jm-mini">Attach Resume defaults to PDF (falls back to DOCX if PDF missing). READY FOR FINAL REVIEW never submits.</p>
       <p class="jm-mini">Activity log</p>
       <ul class="jm-list">${state.log
         .slice(0, 6)
@@ -186,11 +188,37 @@
     root.querySelector("#jm-confirm")?.addEventListener("click", onConfirm);
     root.querySelector("#jm-suggest")?.addEventListener("click", onSuggest);
     root.querySelector("#jm-ready")?.addEventListener("click", onReady);
+    root.querySelector("#jm-attach-resume")?.addEventListener("click", () => onAttach("resume"));
+    root.querySelector("#jm-attach-cover")?.addEventListener("click", () => onAttach("cover"));
     root.querySelector("#jm-did-submit")?.addEventListener("click", () => {
       state.showConfirmSubmit = true;
       render();
     });
     root.querySelector("#jm-map")?.addEventListener("click", onMap);
+  }
+
+  async function onAttach(kind) {
+    if (!state.session) return;
+    window.JMFieldMapper.highlightFileUploads(state.session);
+    const inputs = [...document.querySelectorAll("input[type=file]")];
+    const target = inputs.find((el) => {
+      const label = window.JMFieldMapper.labelFor(el);
+      const key = window.JMFieldMapper.mapKey(label, el.name, el.id);
+      if (kind === "cover") return key === "cover_letter_file" || /cover/i.test(label + el.name);
+      return key === "resume_file" || /resume|cv/i.test(label + el.name);
+    }) || inputs[0];
+    if (!target) {
+      alert("No file upload field found on this page. Use Download resume/cover, then upload manually.");
+      return;
+    }
+    try {
+      const preferred = await window.JMFieldMapper.attachPreferredToInput(target, state.session, kind);
+      addLog(`Attached ${preferred.filename} (${preferred.format}) to ${kind} field.`);
+      alert(`Attached ${preferred.filename}.\n${preferred.format !== "pdf" ? "PDF was unavailable — used DOCX fallback." : "PDF selected by default."}`);
+    } catch (err) {
+      addLog(`Attach failed: ${err.message || err}`);
+      alert(`Attach failed: ${err.message || err}\nDownload the file and upload manually.`);
+    }
   }
 
   async function onConfirm() {
