@@ -23,7 +23,7 @@ from app.schemas import (
 )
 from app.services.cover_letter import generate_cover_letter
 from app.services.filters import level_hint
-from app.services.job_finder import purge_unverified_remote, search_jobs, upsert_jobs
+from app.services.job_finder import purge_paid_boards, purge_unverified_remote, search_jobs, upsert_jobs
 from app.services.pipeline_stages import PORTFOLIO_URL, PIPELINE_STAGES, is_valid_status, stage_label
 from app.services.portfolio_matcher import match_portfolio
 from app.services.resume_tailor import tailor_resume
@@ -175,7 +175,9 @@ async def api_search_jobs(
     )
     added = 0
     remote_purged = 0
+    paid_purged: dict = {"jobs_hidden": 0, "apps_flagged": 0}
     if persist:
+        paid_purged = purge_paid_boards(db)
         remote_purged = purge_unverified_remote(db)
         added = upsert_jobs(db, result["jobs"])
     top = result["jobs"][:10]
@@ -184,12 +186,17 @@ async def api_search_jobs(
         "matched": result["matched"],
         "added": added,
         "purged_placeholders": purged,
+        "purged_paid_boards": paid_purged,
         "purged_unverified_remote": remote_purged,
         "rejected_unverified_remote": result.get("rejected_unverified_remote", 0),
         "rejected_inactive": result.get("rejected_inactive", 0),
         "rejected_placeholder": result.get("rejected_placeholder", 0),
+        "rejected_paid_board": result.get("rejected_paid_board", 0),
+        "rejected_staffing_agency": result.get("rejected_staffing_agency", 0),
         "errors": result["errors"],
         "sources_note": result["sources_note"],
+        "source_policy": result.get("source_policy"),
+        "free_sources_only": True,
         "ranking_mode": result.get("ranking_mode"),
         "remote_mode": result.get("remote_mode"),
         "production_mode": True,
@@ -217,7 +224,12 @@ def list_jobs(
 
     query = db.query(Job).filter(
         ~Job.status.in_(
-            ["hidden-unverified-remote", "hidden-placeholder", "hidden-inactive"]
+            [
+                "hidden-unverified-remote",
+                "hidden-placeholder",
+                "hidden-inactive",
+                "hidden-paid-board",
+            ]
         )
     )
     if status:

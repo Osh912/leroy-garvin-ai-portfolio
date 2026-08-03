@@ -79,16 +79,20 @@ def careers_url_for_job(job: dict[str, Any]) -> str:
     if source.startswith("ashby:"):
         board = source.split(":", 1)[1]
         return f"https://jobs.ashbyhq.com/{board}"
+    if source.startswith("workable:"):
+        board = source.split(":", 1)[1]
+        return f"https://apply.workable.com/{board}"
     if source == "remoteok":
         return "https://remoteok.com"
     if source == "remotive":
         return "https://remotive.com"
     if source == "jobicy":
         return "https://jobicy.com"
-    if source == "weworkremotely":
-        return "https://weworkremotely.com"
     if source == "arbeitnow":
         return "https://www.arbeitnow.com"
+    # Paid boards never returned as careers destinations
+    if source in {"weworkremotely", "flexjobs", "remoterocketship"}:
+        return ""
 
     # Fallback: origin of posting URL
     if url:
@@ -144,12 +148,19 @@ def source_display(source: str) -> str:
     if s.startswith("workable:"):
         return f"Workable ({s.split(':', 1)[1]})"
     mapping = {
-        "remoteok": "RemoteOK",
-        "remotive": "Remotive",
-        "jobicy": "Jobicy",
-        "weworkremotely": "We Work Remotely",
-        "workable": "Workable",
-        "arbeitnow": "Arbeitnow",
-        "manual": "Manual Import",
+        "remoteok": "RemoteOK (free)",
+        "remotive": "Remotive (free)",
+        "jobicy": "Jobicy (free)",
+        "arbeitnow": "Arbeitnow (free)",
+        "manual": "Manual Import (free)",
+        "linkedin": "LinkedIn Easy Apply (free)",
+        "indeed": "Indeed (free)",
+        "ziprecruiter": "ZipRecruiter (free)",
+        "builtin": "Built In (free)",
+        "wellfound": "Wellfound (free)",
+        "otta": "Otta (free)",
+        "weworkremotely": "BLOCKED — We Work Remotely (paid/auto-apply)",
+        "flexjobs": "BLOCKED — FlexJobs (paid)",
+        "remoterocketship": "BLOCKED — Remote Rocketship (paid)",
     }
     return mapping.get(s.lower(), s)

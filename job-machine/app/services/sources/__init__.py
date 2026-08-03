@@ -157,68 +157,11 @@ async def fetch_arbeitnow(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
 
 async def fetch_weworkremotely(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """We Work Remotely category RSS feeds (public)."""
-    import re
-    from xml.etree import ElementTree as ET
-
-    feeds = [
-        "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
-        "https://weworkremotely.com/categories/remote-customer-support-jobs.rss",
-        "https://weworkremotely.com/categories/remote-product-jobs.rss",
-        "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss",
-    ]
-    out: list[dict[str, Any]] = []
-    for feed in feeds:
-        try:
-            r = await client.get(feed, headers={"User-Agent": "LeroyJobMachine/1.0"})
-            if r.status_code >= 400:
-                continue
-            root = ET.fromstring(r.text)
-            for item in root.findall(".//item"):
-                title = (item.findtext("title") or "").strip()
-                link = (item.findtext("link") or "").strip()
-                desc_raw = item.findtext("description") or ""
-                desc = re.sub(r"<[^>]+>", " ", desc_raw)
-                desc = re.sub(r"\s+", " ", desc).strip()
-                company = ""
-                role = title
-                if ":" in title:
-                    company, role = [p.strip() for p in title.split(":", 1)]
-                # Prefer region text from WWR markup when present
-                region = ""
-                m_region = re.search(
-                    r'class="[^"]*region[^"]*"[^>]*>([^<]+)',
-                    desc_raw,
-                    re.I,
-                )
-                if m_region:
-                    region = m_region.group(1).strip()
-                if not region:
-                    m_loc = re.search(
-                        r"\b((?:Fully\s+)?Remote(?:\s*[-–—,]?\s*(?:United States|USA|US|Only))?|Work From Home|100%\s*Remote)\b",
-                        desc,
-                        re.I,
-                    )
-                    region = m_loc.group(1).strip() if m_loc else "Remote - United States"
-                # Guard against broken HTML leftovers
-                if "imgix" in region.lower() or "http" in region.lower() or len(region) > 80:
-                    region = "Remote - United States"
-                out.append(
-                    _base(
-                        source="weworkremotely",
-                        external_id=_id("wwr", link or title),
-                        company=company or "Unknown",
-                        title=role or title,
-                        url=link,
-                        location=region,
-                        description=desc,
-                        tags=["remote", "weworkremotely", "fully remote"],
-                    )
-                )
-        except Exception:  # noqa: BLE001
-            continue
-    return out
-
+    """DISABLED — We Work Remotely / AI Auto-Apply is permanently blacklisted (paid funnel)."""
+    raise RuntimeError(
+        "weworkremotely is permanently disabled: paid/auto-apply board is blacklisted. "
+        "Use free ATS sources (Greenhouse, Lever, Ashby, Workable) instead."
+    )
 
 async def fetch_greenhouse_board(client: httpx.AsyncClient, board: str) -> list[dict[str, Any]]:
     r = await client.get(

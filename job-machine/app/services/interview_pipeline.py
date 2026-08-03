@@ -15,7 +15,7 @@ from app.services.filters import (
     verify_remote,
 )
 from app.services.interview_prep import build_interview_prep
-from app.services.job_finder import purge_unverified_remote, search_jobs, upsert_jobs
+from app.services.job_finder import purge_paid_boards, purge_unverified_remote, search_jobs, upsert_jobs
 from app.services.packet_store import save_packet_locally
 from app.services.pipeline_stages import (
     interview_probability_from_job,
@@ -225,6 +225,7 @@ async def morning_refresh(db: Session, *, prepare_packets: bool = True) -> dict[
         prefer_no_degree=True,
         block_five_plus_years=True,
     )
+    purged_paid = purge_paid_boards(db)
     purged = purge_unverified_remote(db)
     added = upsert_jobs(db, result["jobs"])
     packets: list[dict[str, Any]] = []
@@ -239,10 +240,13 @@ async def morning_refresh(db: Session, *, prepare_packets: bool = True) -> dict[
         "fetched": result["fetched"],
         "matched": result["matched"],
         "added": added,
+        "purged_paid_boards": purged_paid,
         "purged_unverified_remote": purged,
         "rejected_unverified_remote": result.get("rejected_unverified_remote", 0),
+        "rejected_paid_board": result.get("rejected_paid_board", 0),
         "packets_prepared": len(packets),
         "auto_apply": False,
+        "free_sources_only": True,
         "top_10": packets,
     }
     (log_dir / "morning_refresh_last.json").write_text(json.dumps(log, indent=2), encoding="utf-8")

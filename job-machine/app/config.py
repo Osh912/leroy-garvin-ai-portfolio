@@ -24,12 +24,13 @@ class Settings(BaseSettings):
     greenhouse_boards: str = (
         "openai,anthropic,gitlab,automattic,zapier,stripe,datadog,airtable,"
         "hubspot,canonical,elastic,cloudflare,mozilla,docker,gusto,"
-        "cloudinary,hashicorp,figma,notion,discord"
+        "cloudinary,hashicorp,figma,notion,discord,vercel,calendly,"
+        "twilio,shopify,duolingo,reddit,dropbox,box,asana,intercom"
     )
     lever_companies: str = (
-        "netflix,shopify,figma,canonical,twitch,spotify,reddit,duolingo"
+        "netflix,shopify,figma,canonical,twitch,spotify,reddit,duolingo,netlify"
     )
-    ashby_boards: str = "openai,anthropic,ramp,notion"
+    ashby_boards: str = "openai,anthropic,ramp,notion,linear,vercel"
     workable_companies: str = "qase,customer-io,tekion"
     database_url: str = f"sqlite:///{ROOT / 'data' / 'job_machine.db'}"
     host: str = "127.0.0.1"

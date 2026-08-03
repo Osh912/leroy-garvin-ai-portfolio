@@ -42,6 +42,7 @@ ROLE_KEYWORDS = [
 
 PRIORITY_TITLE_TERMS = [
     "ai operations",
+    "ai ops",
     "workflow automation",
     "technical support",
     "ai implementation",
@@ -53,15 +54,22 @@ PRIORITY_TITLE_TERMS = [
     "automation engineer",
     "implementation specialist",
     "operations specialist",
+    "operations engineer",
     "support specialist",
     "support engineer",
     "technical operations",
     "prompt engineer",
+    "prompt engineering",
     "ai enablement",
     "qa automation",
     "technical consultant",
     "remote operations",
     "python automation",
+    "saas",
+    "sales engineer",
+    "ai automation",
+    "conversational ai",
+    "customer operations",
 ]
 
 LEVEL_KEYWORDS = [
@@ -105,12 +113,11 @@ VERIFIED_REMOTE_PHRASES = [
     "remote-first",
 ]
 
-# Trusted remote-only job boards (listings are remote by platform, still need no city/office trap)
+# Trusted remote-only free boards (never paid subscription boards)
 TRUSTED_REMOTE_SOURCES = {
     "remoteok",
     "remotive",
     "jobicy",
-    "weworkremotely",
     "arbeitnow",
 }
 
@@ -917,6 +924,14 @@ def should_keep(
 
     ok, _reason = is_production_eligible(job)
     if not ok:
+        return False
+
+    from app.services.source_policy import is_allowed_free_source, is_staffing_agency_without_employer
+
+    allowed, _src_reason = is_allowed_free_source(job)
+    if not allowed:
+        return False
+    if is_staffing_agency_without_employer(job):
         return False
 
     verification = verify_remote(job)

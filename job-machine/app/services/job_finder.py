@@ -38,9 +38,14 @@ from app.services.sources import (
     fetch_lever_company,
     fetch_remoteok,
     fetch_remotive,
-    fetch_weworkremotely,
     fetch_with_retry,
     fetch_workable_company,
+)
+from app.services.source_policy import (
+    is_allowed_free_source,
+    is_paid_board_job,
+    is_staffing_agency_without_employer,
+    source_policy_summary,
 )
 
 
@@ -79,12 +84,13 @@ async def search_jobs(
     rejected_placeholder = 0
     rejected_unverified = 0
     rejected_inactive = 0
+    rejected_paid_board = 0
+    rejected_staffing = 0
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        # Concurrent source fetches with one retry on failure / rate limits
+        # Concurrent free-source fetches only (paid boards never registered)
         tasks: list[tuple[str, Any]] = [
             ("remoteok", lambda: fetch_remoteok(client)),
-            ("weworkremotely", lambda: fetch_weworkremotely(client)),
             ("remotive", lambda: fetch_remotive(client)),
             ("jobicy", lambda: fetch_jobicy(client)),
             ("arbeitnow", lambda: fetch_arbeitnow(client)),
@@ -120,6 +126,22 @@ async def search_jobs(
 
     candidates: list[dict[str, Any]] = []
     for job in collected:
+        paid, paid_reason = is_paid_board_job(job)
+        if paid:
+            rejected_paid_board += 1
+            log_action("rejected_paid_board", source=job.get("source"), reason=paid_reason, url=job.get("url"))
+            continue
+
+        allowed, allow_reason = is_allowed_free_source(job)
+        if not allowed:
+            rejected_paid_board += 1
+            log_action("rejected_disallowed_source", source=job.get("source"), reason=allow_reason)
+            continue
+
+        if is_staffing_agency_without_employer(job):
+            rejected_staffing += 1
+            continue
+
         ok, reason = is_production_eligible(job)
         if not ok:
             rejected_placeholder += 1
@@ -210,12 +232,15 @@ async def search_jobs(
         "rejected_placeholder": rejected_placeholder,
         "rejected_unverified_remote": rejected_unverified,
         "rejected_inactive": rejected_inactive,
+        "rejected_paid_board": rejected_paid_board,
+        "rejected_staffing_agency": rejected_staffing,
         "errors": errors,
         "jobs": kept,
         "ranking_mode": "transparent_match_score_v2",
         "remote_mode": "strict",
         "production_mode": True,
         "concurrent_sources": True,
+        "free_sources_only": True,
         "refreshed_at": datetime.utcnow().isoformat() + "Z",
         "weights": {
             "skill_match": 0.35,
@@ -238,11 +263,17 @@ async def search_jobs(
             "quick_filters": quick_filters or [],
             "require_salary_listed": require_salary_listed,
             "no_placeholders": True,
+            "no_paid_job_boards": True,
+            "no_staffing_without_employer": True,
         },
+        "source_policy": source_policy_summary(),
         "sources_note": (
-            "PRODUCTION MODE — live sources only. No placeholders. No invented interview %. "
-            "Match Score = skill + resume + portfolio + experience + remote + salary. "
-            "Expired postings removed after active-URL check. Auto-apply: OFF."
+            "FREE SOURCES ONLY — Greenhouse, Lever, Ashby, Workable + free aggregators "
+            "(RemoteOK, Remotive, Jobicy). Direct company careers OK. "
+            "LinkedIn Easy Apply / Indeed / ZipRecruiter / Google Jobs / Built In / Wellfound / Otta "
+            "allowed when free (manual import). "
+            "PERMANENTLY EXCLUDED: We Work Remotely, FlexJobs, Remote Rocketship, and any pay-to-apply board. "
+            "100% remote · US only · no staffing agencies without named employer · Auto-apply: OFF."
         ),
         "auto_apply": False,
     }
@@ -383,6 +414,46 @@ def purge_placeholders(db: Session) -> dict[str, int]:
                 shutil.rmtree(folder, ignore_errors=True)
                 packet_dirs += 1
     return {"jobs_removed": jobs_removed, "apps_removed": apps_removed, "packet_dirs_removed": packet_dirs}
+
+
+def purge_paid_boards(db: Session) -> dict[str, int]:
+    """Hide jobs from permanently blacklisted paid boards (WWR, FlexJobs, Remote Rocketship, etc.)."""
+    hidden = 0
+    apps_flagged = 0
+    for row in db.query(Job).all():
+        job = {
+            "title": row.title,
+            "company": row.company,
+            "location": row.location,
+            "description": row.description or "",
+            "tags": row.tags or "",
+            "source": row.source,
+            "url": row.url,
+        }
+        paid, reason = is_paid_board_job(job)
+        allowed, allow_reason = is_allowed_free_source(job)
+        if paid or not allowed:
+            if row.status != "hidden-paid-board":
+                row.status = "hidden-paid-board"
+                hidden += 1
+            try:
+                bd = json.loads(row.score_breakdown or "{}")
+            except json.JSONDecodeError:
+                bd = {}
+            bd["paid_board_block"] = {
+                "blocked": True,
+                "reason": reason or allow_reason,
+                "checked_at": datetime.utcnow().isoformat() + "Z",
+            }
+            row.score_breakdown = json.dumps(bd)
+            for app in db.query(Application).filter(Application.job_id == row.id).all():
+                if app.status not in {"applied", "offer", "accepted", "rejected", "withdrawn"}:
+                    note = f"\n[{datetime.utcnow().isoformat()}Z] Hidden: paid/disallowed board ({reason or allow_reason})."
+                    app.notes = ((app.notes or "").rstrip() + note).strip()
+                    apps_flagged += 1
+    db.commit()
+    log_action("purge_paid_boards", jobs_hidden=hidden, apps_flagged=apps_flagged)
+    return {"jobs_hidden": hidden, "apps_flagged": apps_flagged}
 
 
 def mark_inactive_job(db: Session, job_id: int, reason: str = "inactive") -> None:

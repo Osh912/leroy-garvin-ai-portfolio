@@ -1,13 +1,16 @@
 # Job Machine — Leroy Garvin Jr (Production)
 
-AI Interview Pipeline for verified **remote** roles in AI Operations, Workflow Automation, Technical Support, Solutions Engineering, Customer Success, and AI Implementation.
+AI Interview Pipeline for verified **remote US** roles in AI Operations, Workflow Automation, Technical Support, Solutions Engineering, Customer Success, Prompt Engineering, and related SaaS roles.
 
 ## Production rules
 
 - No placeholder / demo employers (Acme, Example Corp, etc.)
-- Only live sources (RemoteOK, We Work Remotely, Greenhouse, Lever, Ashby, Remotive, Jobicy)
+- **Free sources only** — Greenhouse, Lever, Ashby, Workable + free aggregators (RemoteOK, Remotive, Jobicy)
+- Free discovery/manual: LinkedIn Easy Apply, Indeed, ZipRecruiter, Google Jobs, Built In, Wellfound, Otta
+- **Permanently excluded:** We Work Remotely, FlexJobs, Remote Rocketship, and any pay-to-apply / premium board
+- 100% remote · United States only · no staffing agencies without a named employer
 - Active posting URL check before display
-- Transparent **Match Score** (skill · resume · portfolio · experience · remote · salary) — never invents interview probabilities
+- Transparent **Match Score** — never invents interview probabilities
 - Auto-apply is always OFF — applications require explicit approval
 
 ## Run locally
