@@ -136,25 +136,40 @@ def test_export_bundle_one_click_formats():
     assert files["preferred_resume"] == RESUME_PDF
 
 
-def test_pdf_fallback_prefers_docx(monkeypatch, tmp_path: Path):
+def test_pdf_fallback_raises_when_pdf_fails(monkeypatch, tmp_path: Path):
     import app.services.document_export as de
+    from app.services.document_export import ExportGenerationError
 
     def fail_pdf(*_a, **_k):
-        return False
+        raise RuntimeError("simulated PDF engine failure")
 
     monkeypatch.setattr(de, "write_markdown_pdf", fail_pdf)
+    try:
+        de.write_ats_packet_documents(
+            tmp_path,
+            resume_markdown=SAMPLE_RESUME,
+            cover_markdown=SAMPLE_COVER,
+            company="Acme",
+            title="Support",
+            require_all=True,
+        )
+        assert False, "should have raised"
+    except ExportGenerationError as exc:
+        assert any("resume.pdf" in e for e in exc.errors)
+        assert "simulated PDF engine failure" in str(exc)
+    # With require_all=False, still records errors and prefers nothing incomplete
     docs = de.write_ats_packet_documents(
         tmp_path,
         resume_markdown=SAMPLE_RESUME,
         cover_markdown=SAMPLE_COVER,
         company="Acme",
         title="Support",
+        require_all=False,
     )
-    assert docs["preferred_resume"] == RESUME_DOCX
-    assert docs["preferred_cover"] == COVER_DOCX
-    assert docs["fallback_used"] is True
+    assert docs["success"] is False
+    assert docs["pdf_ok"] is False
     assert (tmp_path / RESUME_DOCX).exists()
-    assert (tmp_path / COVER_DOCX).exists()
+    assert any("simulated PDF" in e for e in docs["errors"])
 
 
 def test_fixtures_still_have_file_inputs_for_ats_platforms():

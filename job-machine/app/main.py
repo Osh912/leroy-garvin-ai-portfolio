@@ -76,6 +76,11 @@ async def _morning_loop() -> None:
 @app.on_event("startup")
 async def on_startup() -> None:
     global _refresh_task
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
+    logging.getLogger("job_machine.export").setLevel(logging.INFO)
     (ROOT / "data").mkdir(parents=True, exist_ok=True)
     (ROOT / "data" / "interview_packets").mkdir(parents=True, exist_ok=True)
     (ROOT / "data" / "daily_briefs").mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -14,11 +15,15 @@ from app.services.document_export import (
     RESUME_DOCX,
     RESUME_MD,
     RESUME_PDF,
+    STANDARD_PACKET_FILES,
+    ExportGenerationError,
     build_packet_zip,
     write_ats_packet_documents,
 )
 from app.services.filters import load_profile
 from app.services.pipeline_stages import PORTFOLIO_URL
+
+log = logging.getLogger("job_machine.export")
 
 PACKETS_DIR = ROOT / "data" / "interview_packets"
 
@@ -29,7 +34,7 @@ def _safe(name: str) -> str:
 
 def packet_dir(job_id: int, company: str = "", title: str = "") -> Path:
     label = _safe(f"{job_id}-{company}-{title}")
-    path = PACKETS_DIR / label
+    path = (PACKETS_DIR / label).resolve()
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -59,6 +64,7 @@ def save_packet_locally(
         cover_markdown=cover,
         company=company,
         title=title,
+        require_all=True,
     )
 
     (folder / "interview_prep.json").write_text(json.dumps(prep, indent=2), encoding="utf-8")
@@ -86,11 +92,13 @@ def save_packet_locally(
         "saved_at": datetime.utcnow().isoformat() + "Z",
         "preferred_resume": docs.get("preferred_resume"),
         "preferred_cover": docs.get("preferred_cover"),
+        "absolute_folder": str(folder),
         "ats_export": {
             "pdf_ok": docs.get("pdf_ok"),
             "docx_ok": docs.get("docx_ok"),
-            "fallback_used": docs.get("fallback_used"),
             "files_written": docs.get("files_written"),
+            "verified_on_disk": docs.get("verified_on_disk"),
+            "errors": docs.get("errors"),
         },
         "paths": {
             "resume": str(folder / RESUME_MD),
@@ -132,19 +140,38 @@ def export_bundle_files(
     job_id: int | None = None,
     application_id: int | None = None,
 ) -> dict[str, Any]:
-    """Generate md+pdf+docx into the job packet folder and return one-click export payload."""
+    """Generate all six ATS files into the job packet folder. Raises if PDF/DOCX missing."""
     folder_id = job_id if job_id is not None else (application_id or 0)
     folder = packet_dir(folder_id, company, title)
-    docs = write_ats_packet_documents(
+    log.info(
+        "export.bundle start application_id=%s job_id=%s folder=%s",
+        application_id,
+        job_id,
         folder,
-        resume_markdown=resume,
-        cover_markdown=cover,
-        company=company,
-        title=title,
     )
+
+    try:
+        docs = write_ats_packet_documents(
+            folder,
+            resume_markdown=resume,
+            cover_markdown=cover,
+            company=company,
+            title=title,
+            require_all=True,
+        )
+    except ExportGenerationError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.exception("export.bundle unexpected failure")
+        raise ExportGenerationError(
+            f"Export failed: {type(exc).__name__}: {exc}",
+            errors=[f"{type(exc).__name__}: {exc}"],
+            folder=str(folder),
+        ) from exc
+
     zip_path = build_packet_zip(folder)
 
-    # Keep company-tagged copies for legacy autofill token checks
+    # Keep company-tagged markdown copies for legacy helpers
     tagged_resume = folder / f"{_safe(company)}_{_safe(title)}_resume.md"
     tagged_cover = folder / f"{_safe(company)}_{_safe(title)}_cover.md"
     tagged_resume.write_text(resume or "", encoding="utf-8")
@@ -155,18 +182,6 @@ def export_bundle_files(
         base = f"/api/applications/{application_id}/export"
     elif job_id is not None:
         base = f"/api/jobs/{job_id}/export"
-    else:
-        base = ""
-
-    files = {
-        RESUME_MD: str(folder / RESUME_MD),
-        RESUME_PDF: docs["paths"].get("resume_pdf"),
-        RESUME_DOCX: docs["paths"].get("resume_docx"),
-        COVER_MD: str(folder / COVER_MD),
-        COVER_PDF: docs["paths"].get("cover_pdf"),
-        COVER_DOCX: docs["paths"].get("cover_docx"),
-        "export_packet.zip": str(zip_path),
-    }
 
     download_urls = {}
     if base:
@@ -180,29 +195,48 @@ def export_bundle_files(
             "zip": f"{base}/zip",
         }
 
-    preferred_resume = docs.get("preferred_resume") or RESUME_PDF
-    preferred_cover = docs.get("preferred_cover") or COVER_PDF
+    files_on_disk = {
+        name: str(folder / name)
+        for name in STANDARD_PACKET_FILES
+        if (folder / name).exists()
+    }
+    # Hard verify again before reporting success
+    missing = [n for n in STANDARD_PACKET_FILES if n not in files_on_disk]
+    if missing:
+        raise ExportGenerationError(
+            f"Post-write verification failed — missing {missing} in {folder}",
+            errors=docs.get("errors") or [],
+            folder=str(folder),
+        )
+
+    log.info("export.bundle SUCCESS absolute_folder=%s files=%s", folder, list(files_on_disk))
 
     return {
-        "resume_filename": RESUME_MD,
-        "cover_filename": COVER_MD,
+        "resume_filename": RESUME_PDF,  # prefer PDF name in UI (not .md)
+        "cover_filename": COVER_PDF,
         "resume": resume,
         "cover_letter": cover,
         "portfolio_url": portfolio_url or PORTFOLIO_URL,
         "export_note": (
-            "ATS packet ready (md + pdf + docx). PDF preferred for upload; DOCX used if PDF fails. "
+            f"ATS packet complete (6 files) at {folder}. "
             "Applications require Leroy's approval — never auto-submitted."
         ),
         "folder": str(folder),
-        "files": {k: v for k, v in files.items() if v},
-        "files_written": docs.get("files_written") or [],
+        "absolute_folder": str(folder),
+        "files": files_on_disk,
+        "files_written": list(STANDARD_PACKET_FILES),
+        "missing_files": [],
+        "verified_on_disk": docs.get("verified_on_disk") or {},
         "download_urls": download_urls,
         "zip_url": download_urls.get("zip"),
-        "preferred_resume": preferred_resume,
-        "preferred_cover": preferred_cover,
-        "preferred_resume_url": download_urls.get(preferred_resume),
-        "preferred_cover_url": download_urls.get(preferred_cover),
-        "pdf_ok": bool(docs.get("pdf_ok")),
-        "docx_ok": bool(docs.get("docx_ok")),
-        "fallback_used": bool(docs.get("fallback_used")),
+        "preferred_resume": RESUME_PDF,
+        "preferred_cover": COVER_PDF,
+        "preferred_resume_url": download_urls.get(RESUME_PDF),
+        "preferred_cover_url": download_urls.get(COVER_PDF),
+        "pdf_ok": True,
+        "docx_ok": True,
+        "fallback_used": False,
+        "success": True,
+        "errors": docs.get("errors") or [],
+        "six_files": list(STANDARD_PACKET_FILES),
     }

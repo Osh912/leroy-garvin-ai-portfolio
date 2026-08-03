@@ -676,37 +676,61 @@ def approve_apply(app_id: int, db: Session = Depends(get_db)):
 
 @router.get("/applications/{app_id}/export", response_model=ExportOut)
 def export_application(app_id: int, db: Session = Depends(get_db)):
+    from app.services.document_export import ExportGenerationError
     from app.services.packet_store import export_bundle_files
 
     row = db.get(Application, app_id)
     if not row:
         raise HTTPException(404, "Application not found")
-    bundle = export_bundle_files(
-        resume=row.tailored_resume or "# Resume not generated yet",
-        cover=row.cover_letter or "# Cover letter not generated yet",
-        portfolio_url=PORTFOLIO_URL,
-        company=row.company,
-        title=row.position,
-        job_id=row.job_id,
-        application_id=row.id,
-    )
+    try:
+        bundle = export_bundle_files(
+            resume=row.tailored_resume or "# Resume not generated yet",
+            cover=row.cover_letter or "# Cover letter not generated yet",
+            portfolio_url=PORTFOLIO_URL,
+            company=row.company,
+            title=row.position,
+            job_id=row.job_id,
+            application_id=row.id,
+        )
+    except ExportGenerationError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": str(exc),
+                "errors": exc.errors,
+                "absolute_folder": exc.folder,
+                "success": False,
+            },
+        ) from exc
     return ExportOut(application_id=row.id, job_id=row.job_id, **bundle)
 
 
 @router.get("/jobs/{job_id}/export", response_model=ExportOut)
 def export_job(job_id: int, db: Session = Depends(get_db)):
+    from app.services.document_export import ExportGenerationError
     from app.services.packet_store import export_bundle_files
 
     gen = generate_packet(job_id, db)
     job = db.get(Job, job_id)
-    bundle = export_bundle_files(
-        resume=gen.tailored_resume,
-        cover=gen.cover_letter,
-        portfolio_url=PORTFOLIO_URL,
-        company=job.company if job else "company",
-        title=job.title if job else "role",
-        job_id=job_id,
-    )
+    try:
+        bundle = export_bundle_files(
+            resume=gen.tailored_resume,
+            cover=gen.cover_letter,
+            portfolio_url=PORTFOLIO_URL,
+            company=job.company if job else "company",
+            title=job.title if job else "role",
+            job_id=job_id,
+        )
+    except ExportGenerationError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": str(exc),
+                "errors": exc.errors,
+                "absolute_folder": exc.folder,
+                "success": False,
+            },
+        ) from exc
     return ExportOut(job_id=job_id, **bundle)
 
 
@@ -714,21 +738,27 @@ def export_job(job_id: int, db: Session = Depends(get_db)):
 def export_application_zip(app_id: int, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
 
-    from app.services.document_export import build_packet_zip
+    from app.services.document_export import ExportGenerationError, build_packet_zip
     from app.services.packet_store import export_bundle_files
 
     row = db.get(Application, app_id)
     if not row:
         raise HTTPException(404, "Application not found")
-    bundle = export_bundle_files(
-        resume=row.tailored_resume or "",
-        cover=row.cover_letter or "",
-        portfolio_url=PORTFOLIO_URL,
-        company=row.company,
-        title=row.position,
-        job_id=row.job_id,
-        application_id=row.id,
-    )
+    try:
+        bundle = export_bundle_files(
+            resume=row.tailored_resume or "",
+            cover=row.cover_letter or "",
+            portfolio_url=PORTFOLIO_URL,
+            company=row.company,
+            title=row.position,
+            job_id=row.job_id,
+            application_id=row.id,
+        )
+    except ExportGenerationError as exc:
+        raise HTTPException(
+            500,
+            {"message": str(exc), "errors": exc.errors, "absolute_folder": exc.folder},
+        ) from exc
     folder = Path(bundle["folder"])
     zip_path = build_packet_zip(folder)
     return FileResponse(
@@ -742,21 +772,27 @@ def export_application_zip(app_id: int, db: Session = Depends(get_db)):
 def export_job_zip(job_id: int, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
 
-    from app.services.document_export import build_packet_zip
+    from app.services.document_export import ExportGenerationError, build_packet_zip
     from app.services.packet_store import export_bundle_files
 
     gen = generate_packet(job_id, db)
     job = db.get(Job, job_id)
     company = job.company if job else "company"
     title = job.title if job else "role"
-    bundle = export_bundle_files(
-        resume=gen.tailored_resume,
-        cover=gen.cover_letter,
-        portfolio_url=PORTFOLIO_URL,
-        company=company,
-        title=title,
-        job_id=job_id,
-    )
+    try:
+        bundle = export_bundle_files(
+            resume=gen.tailored_resume,
+            cover=gen.cover_letter,
+            portfolio_url=PORTFOLIO_URL,
+            company=company,
+            title=title,
+            job_id=job_id,
+        )
+    except ExportGenerationError as exc:
+        raise HTTPException(
+            500,
+            {"message": str(exc), "errors": exc.errors, "absolute_folder": exc.folder},
+        ) from exc
     zip_path = build_packet_zip(Path(bundle["folder"]))
     return FileResponse(
         path=str(zip_path),
@@ -769,7 +805,7 @@ def export_job_zip(job_id: int, db: Session = Depends(get_db)):
 def export_application_file(app_id: int, filename: str, db: Session = Depends(get_db)):
     from fastapi.responses import FileResponse
 
-    from app.services.document_export import is_standard_packet_filename
+    from app.services.document_export import ExportGenerationError, is_standard_packet_filename
     from app.services.packet_store import export_bundle_files
 
     row = db.get(Application, app_id)
@@ -777,15 +813,21 @@ def export_application_file(app_id: int, filename: str, db: Session = Depends(ge
         raise HTTPException(404, "Application not found")
     if not is_standard_packet_filename(filename):
         raise HTTPException(400, "Invalid export filename")
-    bundle = export_bundle_files(
-        resume=row.tailored_resume or "",
-        cover=row.cover_letter or "",
-        portfolio_url=PORTFOLIO_URL,
-        company=row.company,
-        title=row.position,
-        job_id=row.job_id,
-        application_id=row.id,
-    )
+    try:
+        bundle = export_bundle_files(
+            resume=row.tailored_resume or "",
+            cover=row.cover_letter or "",
+            portfolio_url=PORTFOLIO_URL,
+            company=row.company,
+            title=row.position,
+            job_id=row.job_id,
+            application_id=row.id,
+        )
+    except ExportGenerationError as exc:
+        raise HTTPException(
+            500,
+            {"message": str(exc), "errors": exc.errors, "absolute_folder": exc.folder},
+        ) from exc
     path = Path(bundle["folder"]) / filename
     if not path.exists():
         raise HTTPException(404, f"{filename} not available (generation may have failed)")

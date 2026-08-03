@@ -81,7 +81,24 @@
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       ...options,
     });
-    if (!res.ok) throw new Error((await res.text()) || res.statusText);
+    if (!res.ok) {
+      const text = await res.text();
+      let detail = text;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed?.detail) {
+          detail =
+            typeof parsed.detail === "string"
+              ? parsed.detail
+              : [parsed.detail.message, ...(parsed.detail.errors || []), parsed.detail.absolute_folder]
+                  .filter(Boolean)
+                  .join("\n");
+        }
+      } catch {
+        /* keep raw */
+      }
+      throw new Error(detail || res.statusText);
+    }
     return res.json();
   }
 
@@ -96,62 +113,110 @@
     return escapeHtml(s).replaceAll("'", "&#39;");
   }
 
-  function downloadText(filename, text) {
-    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
   }
 
-  function downloadUrl(url, filename) {
+  async function downloadUrlAsync(url, filename) {
+    // Fetch blob then save — more reliable than <a download> for multiple files
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`${filename || url}: ${res.status} ${text.slice(0, 300)}`);
+    }
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    if (filename) a.download = filename;
-    a.rel = "noopener";
+    a.href = objectUrl;
+    a.download = filename || "download";
+    document.body.appendChild(a);
     a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  async function exportAllSixFiles(bundle) {
+    const required = bundle.six_files?.length
+      ? bundle.six_files
+      : ["resume.md", "resume.pdf", "resume.docx", "cover_letter.md", "cover_letter.pdf", "cover_letter.docx"];
+    const urls = bundle.download_urls || {};
+    const missing = required.filter((name) => !urls[name]);
+    if (missing.length) {
+      throw new Error(`Export response missing download URLs for: ${missing.join(", ")}`);
+    }
+    if (bundle.success === false || bundle.pdf_ok === false || bundle.docx_ok === false) {
+      const errs = (bundle.errors || []).join("\n") || "PDF/DOCX generation failed";
+      throw new Error(errs);
+    }
+    const written = bundle.files_written || [];
+    const notOnDisk = required.filter((n) => !written.includes(n));
+    if (notOnDisk.length) {
+      throw new Error(
+        `Server did not write: ${notOnDisk.join(", ")}\n` +
+          `Errors:\n${(bundle.errors || []).join("\n") || "(none reported)"}\n` +
+          `Folder: ${bundle.absolute_folder || bundle.folder}`
+      );
+    }
+    for (const name of required) {
+      await downloadUrlAsync(urls[name], name);
+      await sleep(350);
+    }
+    if (bundle.zip_url) {
+      await sleep(200);
+      await downloadUrlAsync(bundle.zip_url, "export_packet.zip");
+    }
+    return required;
   }
 
   async function exportApp(appId) {
-    const bundle = await api(`/api/applications/${appId}/export`);
-    if (bundle.zip_url) {
-      downloadUrl(bundle.zip_url);
-    } else {
-      const urls = bundle.download_urls || {};
-      ["resume.pdf", "resume.docx", "resume.md", "cover_letter.pdf", "cover_letter.docx", "cover_letter.md"].forEach(
-        (name) => {
-          if (urls[name]) downloadUrl(urls[name], name);
-        }
+    let bundle;
+    try {
+      bundle = await api(`/api/applications/${appId}/export`);
+    } catch (err) {
+      alert(`Export FAILED.\n\n${err.message || err}\n\nPDF/DOCX were not generated. Check Job Machine server logs.`);
+      throw err;
+    }
+    try {
+      const files = await exportAllSixFiles(bundle);
+      await navigator.clipboard.writeText(bundle.portfolio_url || "");
+      const abs = bundle.absolute_folder || bundle.folder || "(unknown)";
+      alert(
+        `Export SUCCESS — all 6 ATS files written and downloaded.\n\n` +
+          `Absolute folder:\n${abs}\n\n` +
+          `Files:\n${files.map((f) => "• " + f).join("\n")}\n\n` +
+          `Also downloaded: export_packet.zip\n` +
+          `Portfolio URL copied.`
       );
+    } catch (err) {
+      alert(
+        `Export incomplete — refusing markdown-only success.\n\n` +
+          `${err.message || err}\n\n` +
+          `Absolute folder:\n${bundle.absolute_folder || bundle.folder || "(unknown)"}\n\n` +
+          `Errors:\n${(bundle.errors || []).join("\n") || "(see message above)"}`
+      );
+      throw err;
     }
-    await navigator.clipboard.writeText(bundle.portfolio_url);
-    const written = (bundle.files_written || []).join(", ") || "md/pdf/docx";
-    alert(
-      `Export Packet ready (${written}).\n` +
-        `Folder: ${bundle.folder || "data/interview_packets/"}\n` +
-        `Preferred upload: ${bundle.preferred_resume || "resume.pdf"} / ${bundle.preferred_cover || "cover_letter.pdf"}\n` +
-        `${bundle.fallback_used ? "PDF fallback to DOCX was used.\n" : ""}` +
-        `Portfolio URL copied:\n${bundle.portfolio_url}`
-    );
   }
+
   async function exportJob(jobId) {
-    const bundle = await api(`/api/jobs/${jobId}/export`);
-    if (bundle.zip_url) {
-      downloadUrl(bundle.zip_url);
-    } else {
-      const urls = bundle.download_urls || {};
-      Object.keys(urls)
-        .filter((k) => k !== "zip")
-        .forEach((name) => downloadUrl(urls[name], name));
+    let bundle;
+    try {
+      bundle = await api(`/api/jobs/${jobId}/export`);
+    } catch (err) {
+      alert(`Export FAILED.\n\n${err.message || err}`);
+      throw err;
     }
-    await navigator.clipboard.writeText(bundle.portfolio_url);
-    alert(
-      `Export Packet ready (${(bundle.files_written || []).join(", ") || "all formats"}).\n` +
-        `Preferred: ${bundle.preferred_resume} / ${bundle.preferred_cover}\n` +
-        `Portfolio URL copied:\n${bundle.portfolio_url}`
-    );
+    try {
+      const files = await exportAllSixFiles(bundle);
+      await navigator.clipboard.writeText(bundle.portfolio_url || "");
+      alert(
+        `Export SUCCESS — all 6 ATS files.\n\nAbsolute folder:\n${bundle.absolute_folder || bundle.folder}\n\n` +
+          `${files.join(", ")}`
+      );
+    } catch (err) {
+      alert(`Export incomplete.\n\n${err.message || err}\n\n${bundle.absolute_folder || ""}`);
+      throw err;
+    }
   }
 
   function formatSalary(job) {

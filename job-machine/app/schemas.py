@@ -165,8 +165,11 @@ class ExportOut(BaseModel):
     portfolio_url: str
     export_note: str
     folder: str | None = None
+    absolute_folder: str | None = None
     files: dict[str, str | None] = Field(default_factory=dict)
     files_written: list[str] = Field(default_factory=list)
+    missing_files: list[str] = Field(default_factory=list)
+    verified_on_disk: dict[str, Any] = Field(default_factory=dict)
     download_urls: dict[str, str] = Field(default_factory=dict)
     zip_url: str | None = None
     preferred_resume: str = "resume.pdf"
@@ -176,6 +179,9 @@ class ExportOut(BaseModel):
     pdf_ok: bool = False
     docx_ok: bool = False
     fallback_used: bool = False
+    success: bool = False
+    errors: list[str] = Field(default_factory=list)
+    six_files: list[str] = Field(default_factory=list)
 
 
 class HighestInterviewOut(BaseModel):

@@ -225,6 +225,7 @@ def ensure_application_files(row: Application, job: Job | None) -> dict[str, Any
         cover_markdown=cover,
         company=company,
         title=title,
+        require_all=bool((resume or "").strip() and (cover or "").strip()),
     )
 
     # Legacy company/role-tagged copies for older verify helpers
